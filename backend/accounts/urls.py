@@ -1,0 +1,27 @@
+from django.urls import path, include
+from django.contrib.auth import views as auth_views
+from . import views
+
+urlpatterns = [
+    # API endpoints (existing)
+    path('register/', views.RegisterAPIView.as_view(), name='api-register'),
+    path('login/', views.LoginAPIView.as_view(), name='api-login'),
+    path('google/', views.GoogleLoginAPIView.as_view(), name='api-google-login'),
+    path('password-reset-request/', views.PasswordResetRequestView.as_view(), name='api-password-reset-request'),
+    path('password-reset-confirm/<uidb64>/<token>/', views.PasswordResetConfirmView.as_view(), name='api-password-reset-confirm'),
+
+    # Web form endpoints (new)
+    path('login/', views.login_user, name='login'),
+    path('register/', views.register_user, name='register'),
+    path('logout/', views.logout_user, name='logout'),
+    path('check-auth/', views.check_auth_status, name='check_auth'),
+
+    # Google OAuth
+    path('oauth/', include('social_django.urls', namespace='social')),
+
+    # Password reset (Django built-in)
+    path('password-reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
+    path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
+]

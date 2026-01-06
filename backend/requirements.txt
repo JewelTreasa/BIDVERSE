@@ -1,0 +1,9 @@
+django>=5.0
+djangorestframework
+mysqlclient
+django-cors-headers
+djangorestframework-simplejwt
+python-dotenv
+requests
+google-auth
+social-auth-app-django

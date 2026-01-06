@@ -1,0 +1,507 @@
+/* Custom Django Admin CSS - Clean and Professional Layout */
+
+/* ========================================
+   GENERAL ADMIN STYLING
+   ======================================== */
+
+:root {
+    --admin-primary-color: #79aec8;
+    --admin-secondary-color: #417690;
+    --admin-accent-color: #f8f8f8;
+    --admin-text-color: #333;
+    --admin-border-color: #ddd;
+    --admin-hover-color: #f4f4f4;
+    --admin-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Remove duplicated theme toggle text */
+.theme-toggle {
+    display: none !important;
+}
+
+/* Hide redundant theme toggles that appear multiple times */
+#theme-toggle,
+.theme-toggle-button,
+.theme-toggle-link {
+    display: none !important;
+}
+
+/* ========================================
+   HEADER STYLING
+   ======================================== */
+
+#site-name {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--admin-text-color);
+    margin: 0;
+    padding: 0;
+}
+
+#site-name a {
+    color: inherit;
+    text-decoration: none;
+}
+
+#site-name a:hover {
+    text-decoration: none;
+}
+
+/* Header container */
+#container {
+    min-height: 100vh;
+    background-color: #f8f8f8;
+}
+
+/* Top header bar */
+#user-tools {
+    background: white;
+    border-bottom: 1px solid var(--admin-border-color);
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--admin-shadow);
+}
+
+/* ========================================
+   SIDEBAR NAVIGATION
+   ======================================== */
+
+#nav-sidebar {
+    background: white;
+    border-right: 1px solid var(--admin-border-color);
+    padding: 1rem 0;
+    width: 240px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    overflow-y: auto;
+    box-shadow: var(--admin-shadow);
+    z-index: 100;
+}
+
+#nav-sidebar .module {
+    margin-bottom: 1.5rem;
+}
+
+#nav-sidebar .module h2,
+#nav-sidebar .module h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--admin-secondary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 0.5rem 0;
+    padding: 0 1rem;
+}
+
+#nav-sidebar ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+#nav-sidebar li {
+    margin: 0;
+}
+
+#nav-sidebar a {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: var(--admin-text-color);
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+#nav-sidebar a:hover,
+#nav-sidebar a:focus {
+    background-color: var(--admin-hover-color);
+    border-left-color: var(--admin-primary-color);
+    color: var(--admin-secondary-color);
+}
+
+#nav-sidebar a.current {
+    background-color: var(--admin-primary-color);
+    color: white;
+    border-left-color: var(--admin-secondary-color);
+    font-weight: 500;
+}
+
+/* ========================================
+   MAIN CONTENT AREA
+   ======================================== */
+
+#main {
+    margin-left: 240px;
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+    background-color: #f8f8f8;
+}
+
+/* Content wrapper */
+#content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: var(--admin-shadow);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* Breadcrumbs */
+#breadcrumb {
+    background: transparent;
+    padding: 0 0 1rem 0;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--admin-border-color);
+}
+
+#breadcrumb a {
+    color: var(--admin-primary-color);
+    text-decoration: none;
+}
+
+#breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+/* ========================================
+   DASHBOARD MODULES
+   ======================================== */
+
+.module {
+    background: white;
+    border: 1px solid var(--admin-border-color);
+    border-radius: 6px;
+    box-shadow: var(--admin-shadow);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.module h2 {
+    background: var(--admin-accent-color);
+    border-bottom: 1px solid var(--admin-border-color);
+    padding: 1rem;
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--admin-text-color);
+}
+
+.module .module-content {
+    padding: 1rem;
+}
+
+/* App list styling */
+.app-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.app-item {
+    background: white;
+    border: 1px solid var(--admin-border-color);
+    border-radius: 6px;
+    box-shadow: var(--admin-shadow);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.app-item h3 {
+    background: var(--admin-primary-color);
+    color: white;
+    margin: 0;
+    padding: 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.app-item ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.app-item li {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.app-item li:last-child {
+    border-bottom: none;
+}
+
+.app-item a {
+    display: block;
+    padding: 0.75rem 1rem;
+    color: var(--admin-text-color);
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+
+.app-item a:hover {
+    background-color: var(--admin-hover-color);
+    color: var(--admin-secondary-color);
+}
+
+/* ========================================
+   FORM ELEMENTS
+   ======================================== */
+
+.form-row {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-row label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--admin-text-color);
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+    padding: 0.5rem;
+    border: 1px solid var(--admin-border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+    border-color: var(--admin-primary-color);
+    box-shadow: 0 0 0 2px rgba(121, 174, 200, 0.2);
+    outline: none;
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
+
+.button,
+input[type="submit"],
+input[type="button"],
+button {
+    background: var(--admin-primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+button:hover {
+    background: var(--admin-secondary-color);
+    transform: translateY(-1px);
+}
+
+.button:active,
+input[type="submit"]:active,
+input[type="button"]:active,
+button:active {
+    transform: translateY(0);
+}
+
+/* ========================================
+   TABLES
+   ======================================== */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: var(--admin-shadow);
+}
+
+table thead th {
+    background: var(--admin-accent-color);
+    border-bottom: 2px solid var(--admin-border-color);
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--admin-text-color);
+}
+
+table tbody td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+table tbody tr:hover {
+    background-color: var(--admin-hover-color);
+}
+
+table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 1024px) {
+    #nav-sidebar {
+        width: 200px;
+    }
+
+    #main {
+        margin-left: 200px;
+        padding: 1rem;
+    }
+
+    .app-list {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    #nav-sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--admin-border-color);
+        box-shadow: none;
+    }
+
+    #main {
+        margin-left: 0;
+        padding: 1rem;
+    }
+
+    #user-tools {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .app-list {
+        grid-template-columns: 1fr;
+    }
+
+    table {
+        font-size: 0.9rem;
+    }
+
+    table thead th,
+    table tbody td {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    #content {
+        padding: 1rem;
+    }
+
+    .module h2 {
+        font-size: 1rem;
+        padding: 0.75rem;
+    }
+
+    .module .module-content {
+        padding: 0.75rem;
+    }
+
+    .app-item h3 {
+        font-size: 0.9rem;
+        padding: 0.75rem;
+    }
+
+    .app-item a {
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.hidden {
+    display: none !important;
+}
+
+.clearfix::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+
+/* ========================================
+   FIX SPECIFIC DJANGO ADMIN ISSUES
+   ======================================== */
+
+/* Hide any duplicate theme toggles that might appear */
+.admin-theme-toggle,
+.theme-selector,
+.theme-switcher {
+    display: none !important;
+}
+
+/* Fix any floating elements that might overlap */
+.floating,
+.float-right,
+.float-left {
+    position: static !important;
+    float: none !important;
+}
+
+/* Ensure proper spacing for all elements */
+* {
+    box-sizing: border-box;
+}
+
+/* Fix any empty boxes or containers */
+.empty,
+.placeholder {
+    display: none !important;
+}
+
+/* Improve focus states for accessibility */
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid var(--admin-primary-color);
+    outline-offset: 2px;
+}

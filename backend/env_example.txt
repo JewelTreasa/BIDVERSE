@@ -1,0 +1,12 @@
+# Email Configuration for Password Reset
+# Copy this to .env and replace with your actual values
+
+EMAIL_HOST_USER=your-gmail@gmail.com
+EMAIL_HOST_PASSWORD=your-gmail-app-password
+
+# Google OAuth (existing)
+GOOGLE_CLIENT_ID=210947447626-hqrlt913pgi0ehrrd6gesubitnurqm5i.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Django Secret Key (change in production)
+SECRET_KEY=django-insecure-change-me-in-production-123456789

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BidVerse - Agricultural Commodity Online Auction System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="#" class="logo">Bid<span class="highlight">Verse</span></a>
+            <div class="nav-links">
+                <a href="#how-it-works">How It Works</a>
+                <a href="#auctions">Auctions</a>
+                <a href="#features">Features</a>
+                <a href="contact.html">Contact</a>
+            </div>
+            <div class="nav-buttons">
+                <a href="/login/" class="btn btn-outline">Log In</a>
+                <a href="/register/" class="btn btn-primary">Get Started</a>
+            </div>
+            <button class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero" id="home">
+        <div class="hero-overlay"></div>
+        <div class="container hero-content">
+            <h1>Sell & Buy Agricultural Commodities Through <span class="highlight-text">Smart Auctions</span></h1>
+            <p>The fairest, most transparent marketplace for farmers, traders, and buyers. Connect directly, bid in
+                real-time, and get the best value for your produce.</p>
+            <div class="hero-buttons">
+                <a href="register.html" class="btn btn-primary btn-lg">Start Selling</a>
+                <a href="#auctions" class="btn btn-secondary btn-lg">Browse Auctions</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- How It Works -->
+    <section class="section how-it-works" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2>How It Works</h2>
+                <p>Simple steps to start trading securely</p>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-icon"><i class="fas fa-user-plus"></i></div>
+                    <h3>1. Register</h3>
+                    <p>Sign up as a Farmer or Buyer. Verify your identity to ensure a safe trading environment.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-icon"><i class="fas fa-gavel"></i></div>
+                    <h3>2. List or Bid</h3>
+                    <p>Sellers list commodities with base prices. Buyers place bids in real-time auctions.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-icon"><i class="fas fa-handshake"></i></div>
+                    <h3>3. Trade Securely</h3>
+                    <p>Highest bidder wins. Secure payments and transparent history ensure trust.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Live Auction Previews -->
+    <section class="section auctions" id="auctions">
+        <div class="container">
+            <div class="section-header">
+                <h2>Live Auctions</h2>
+                <p>Bid on high-quality produce happening now</p>
+                <a href="#" class="view-all">View All Auctions <i class="fas fa-arrow-right"></i></a>
+            </div>
+            <div class="auction-grid">
+                <!-- Auction Card 1 -->
+                <div class="auction-card">
+                    <div class="card-image">
+                        <img src="assets/images/rice.jpg" alt="Premium Basmati Rice">
+                        <span class="badge live">Live</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Premium Basmati Rice</h3>
+                        <p class="location"><i class="fas fa-map-marker-alt"></i> Punjab, India</p>
+                        <div class="bid-info">
+                            <div class="current-bid">
+                                <span class="label">Current Bid</span>
+                                <span class="price">₹4,200/qt</span>
+                            </div>
+                            <div class="time-left">
+                                <span class="label">Ends In</span>
+                                <span class="timer">02:14:30</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-block">Place Bid</button>
+                    </div>
+                </div>
+                <!-- Auction Card 2 -->
+                <div class="auction-card">
+                    <div class="card-image">
+                        <img src="assets/images/wheat.jpg" alt="Organic Wheat">
+                        <span class="badge live">Live</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Organic Sharbati Wheat</h3>
+                        <p class="location"><i class="fas fa-map-marker-alt"></i> Madhya Pradesh</p>
+                        <div class="bid-info">
+                            <div class="current-bid">
+                                <span class="label">Current Bid</span>
+                                <span class="price">₹2,800/qt</span>
+                            </div>
+                            <div class="time-left">
+                                <span class="label">Ends In</span>
+                                <span class="timer">04:45:12</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-block">Place Bid</button>
+                    </div>
+                </div>
+                <!-- Auction Card 3 -->
+                <div class="auction-card">
+                    <div class="card-image">
+                        <img src="assets/images/spices.jpg" alt="Premium Cardamom">
+                        <span class="badge upcoming">Starts Soon</span>
+                    </div>
+                    <div class="card-content">
+                        <h3>Premium Cardamom (8mm)</h3>
+                        <p class="location"><i class="fas fa-map-marker-alt"></i> Kerala</p>
+                        <div class="bid-info">
+                            <div class="current-bid">
+                                <span class="label">Base Price</span>
+                                <span class="price">₹1,500/kg</span>
+                            </div>
+                            <div class="time-left">
+                                <span class="label">Starts In</span>
+                                <span class="timer text-highlight">01:30:00</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline btn-block">Notify Me</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Choose Us -->
+    <section class="section features bg-light" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Why Choose BidVerse?</h2>
+                <p>Empowering agriculture with technology and trust</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+                    <h4>Verified Farmers</h4>
+                    <p>All sellers differ KYC verification to ensure genuine quality produce.</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                    <h4>Fair Pricing</h4>
+                    <p>Competitive bidding ensures farmers get the true market value.</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="fas fa-lock"></i></div>
+                    <h4>Secure Payments</h4>
+                    <p>Escrow-like payment systems protect both buyers and sellers.</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="fas fa-search-dollar"></i></div>
+                    <h4>Transparent Bidding</h4>
+                    <p>Real-time updates and complete bid history for full transparency.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Commodities -->
+    <section class="section commodities">
+        <div class="container">
+            <div class="section-header">
+                <h2>Featured Commodities</h2>
+                <p>Explore wide ranges of agricultural products</p>
+            </div>
+            <div class="commodities-gallery">
+                <!-- Using placeholder names for classes to be styled with background images -->
+                <div class="commodity-item item-1">
+                    <div class="overlay">
+                        <h3>Grains</h3>
+                        <p>Wheat, Rice, Maize</p>
+                    </div>
+                </div>
+                <div class="commodity-item item-2">
+                    <div class="overlay">
+                        <h3>Spices</h3>
+                        <p>Cardamom, Pepper, Turmeric</p>
+                    </div>
+                </div>
+                <div class="commodity-item item-3">
+                    <div class="overlay">
+                        <h3>Pulses</h3>
+                        <p>Lentils, Chickpeas</p>
+                    </div>
+                </div>
+                <div class="commodity-item item-4">
+                    <div class="overlay">
+                        <h3>Cash Crops</h3>
+                        <p>Rubber, Cotton, Tea</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="section testimonials bg-light">
+        <div class="container">
+            <div class="section-header">
+                <h2>Farmer Success Stories</h2>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <p class="quote">"BidVerse helped me get 20% more for my wheat harvest than the local mandi. The
+                        process was transparent and payment was fast."</p>
+                    <div class="user-info">
+                        <div class="avatar"><i class="fas fa-user-circle"></i></div>
+                        <div>
+                            <h5>Rajesh Kumar</h5>
+                            <span>Farmer, Punjab</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <p class="quote">"As a wholesale buyer, finding quality spices was hard. BidVerse connects me
+                        directly to verified growers in Kerala."</p>
+                    <div class="user-info">
+                        <div class="avatar"><i class="fas fa-user-circle"></i></div>
+                        <div>
+                            <h5>Anita Desai</h5>
+                            <span>Trader, Mumbai</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container cta-content">
+            <h2>Join the Agricultural Marketplace of the Future</h2>
+            <p>Start trading with confidence today.</p>
+            <div class="cta-buttons">
+                <a href="register.html" class="btn btn-light btn-lg">Sign Up Now</a>
+                <a href="contact.html" class="btn btn-outline-light btn-lg">Contact Sales</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <a href="#" class="logo footer-logo">Bid<span class="highlight">Verse</span></a>
+                    <p>Empowering farmers and buyers with a digital, transparent, and fair auction platform.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#how-it-works">How It Works</a></li>
+                        <li><a href="#auctions">Auctions</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#about">About Us</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="contact.html">Contact Us</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Connect With Us</h4>
+                    <div class="social-icons">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 BidVerse. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Firebase SDK (npm) -->
+    <script src="assets/js/config.js"></script>
+    <script type="module" src="assets/js/main.js"></script>
+    </script>
+    <script src="assets/js/script.js"></script>
+</body>
+
+</html>

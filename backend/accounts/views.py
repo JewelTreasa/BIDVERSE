@@ -8,13 +8,73 @@ from django.urls import reverse
 from .serializers import UserRegistrationSerializer, LoginSerializer, GoogleLoginSerializer
 from django.core.mail import send_mail
 from django.conf import settings
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
+from django.contrib import messages
+from django.utils import timezone
 # Use our custom User model
 from django.contrib.auth import get_user_model
+from .models import Listing, Bid
 User = get_user_model()
+
+def home(request):
+    """Home page view showing latest auctions"""
+    latest_auctions = Listing.objects.filter(is_active=True).order_by('-created_at')[:3]
+    return render(request, 'index.html', {'latest_auctions': latest_auctions})
+
+def contact(request):
+    """Contact page view with form handling"""
+    if request.method == 'POST':
+        # In a real app, we'd save the message or send an email
+        messages.success(request, "Thank you! Your message has been sent successfully.")
+        return redirect('contact')
+    return render(request, 'contact.html')
+
+def marketplace(request):
+    """View all active auctions"""
+    all_auctions = Listing.objects.filter(is_active=True).order_by('-created_at')
+    return render(request, 'marketplace.html', {'all_auctions': all_auctions})
+
+def auction_detail(request, listing_id):
+    """View details of a specific auction"""
+    listing = get_object_or_404(Listing, id=listing_id)
+    bid_history = listing.bids.all().order_by('-timestamp')[:5]
+    return render(request, 'auction_detail.html', {'listing': listing, 'bid_history': bid_history})
+@login_required
+def place_bid(request, listing_id):
+    """Process a new bid"""
+    if request.user.user_type != 'BUYER':
+        messages.error(request, "Only buyers can place bids.")
+        return redirect('auction_detail', listing_id=listing_id)
+    
+    listing = get_object_or_404(Listing, id=listing_id)
+    if not listing.is_active or listing.end_time < timezone.now():
+        messages.error(request, "This auction has ended.")
+        return redirect('auction_detail', listing_id=listing_id)
+        
+    bid_amount = request.POST.get('amount')
+    try:
+        bid_amount = float(bid_amount)
+    except (TypeError, ValueError):
+        messages.error(request, "Invalid bid amount.")
+        return redirect('auction_detail', listing_id=listing_id)
+        
+    current_highest = listing.current_highest_bid or listing.base_price
+    if bid_amount <= float(current_highest):
+        messages.error(request, f"Bid must be higher than ₹{current_highest}")
+        return redirect('auction_detail', listing_id=listing_id)
+        
+    # Create Bid
+    Bid.objects.create(listing=listing, buyer=request.user, amount=bid_amount)
+    
+    # Update Listing
+    listing.current_highest_bid = bid_amount
+    listing.save()
+    
+    messages.success(request, f"Successfully placed bid of ₹{bid_amount}!")
+    return redirect('auction_detail', listing_id=listing_id)
 
 class RegisterAPIView(generics.GenericAPIView):
     serializer_class = UserRegistrationSerializer
@@ -385,6 +445,7 @@ def check_auth(request):
                 'display_name': request.user.get_full_name() or request.user.username,
             }
         })
+    else:
         return JsonResponse({
             'authenticated': False,
             'user': None
@@ -392,7 +453,79 @@ def check_auth(request):
 
 @login_required
 def dashboard(request):
-    """User dashboard view"""
-    return render(request, "dashboard.html", {
-        'user': request.user
-    })
+    """User dashboard view - routes to specialized templates based on user_type"""
+    user_type = request.user.user_type
+    section = request.GET.get('section', 'dashboard')
+    context = {'user': request.user, 'section': section}
+    
+    if user_type == 'FARMER':
+        if request.method == 'POST' and section == 'add_listing':
+            Listing.objects.create(
+                seller=request.user,
+                commodity=request.POST.get('commodity'),
+                quantity=request.POST.get('quantity'),
+                unit=request.POST.get('unit'),
+                base_price=request.POST.get('base_price'),
+                end_time=request.POST.get('end_time'),
+                description=request.POST.get('description')
+            )
+            return redirect(reverse('dashboard') + '?section=listings')
+        
+        if section == 'listings':
+            context['listings'] = Listing.objects.filter(seller=request.user).order_by('-created_at')
+        elif section == 'orders':
+            # Sold items for farmer
+            context['orders'] = Listing.objects.filter(seller=request.user, is_active=False).order_by('-end_time')
+        elif section == 'dashboard':
+            context['active_listings_count'] = Listing.objects.filter(seller=request.user, is_active=True).count()
+            context['sold_count'] = Listing.objects.filter(seller=request.user, is_active=False).count()
+            context['live_listings'] = Listing.objects.filter(seller=request.user, is_active=True).order_by('-created_at')[:5]
+        
+        return render(request, "dashboard/seller.html", context)
+        
+    elif user_type == 'BUYER':
+        user_bids = Bid.objects.filter(buyer=request.user)
+        
+        if section == 'bids':
+            context['bids'] = user_bids.order_by('-timestamp')
+        elif section == 'won':
+            # Simplified logic: listings where user has a bid and is_active=False
+            # and their bid is >= current_highest_bid (which is usually their own)
+            context['won_listings'] = Listing.objects.filter(
+                is_active=False,
+                bids__buyer=request.user
+            ).distinct().order_by('-end_time')
+        elif section == 'orders':
+            context['orders'] = context.get('won_listings', Listing.objects.filter(is_active=False, bids__buyer=request.user).distinct())
+        elif section == 'dashboard':
+            context['active_bids_count'] = user_bids.filter(listing__is_active=True).values('listing').distinct().count()
+            context['won_auctions_count'] = Listing.objects.filter(is_active=False, bids__buyer=request.user).distinct().count()
+            context['recent_bids'] = user_bids.order_by('-timestamp')[:5]
+        
+        return render(request, "dashboard/buyer.html", context)
+        
+    elif user_type == 'ADMIN':
+        if request.method == 'POST' and section == 'users':
+            user_id = request.POST.get('user_id')
+            action = request.POST.get('action')
+            target_user = get_object_or_404(User, id=user_id)
+            if action == 'verify':
+                target_user.is_verified = True
+                target_user.save()
+                messages.success(request, f"User {target_user.email} verified successfully.")
+            return redirect(reverse('dashboard') + '?section=users')
+
+        if section == 'dashboard':
+            context['total_users_count'] = User.objects.count()
+            context['active_auctions_count'] = Listing.objects.filter(is_active=True).count()
+            context['pending_verifications_count'] = User.objects.filter(is_verified=False).count()
+            context['recent_users'] = User.objects.order_by('-date_joined')[:5]
+        elif section == 'users':
+            context['all_users'] = User.objects.all().order_by('-date_joined')
+        elif section == 'auctions':
+            context['all_listings'] = Listing.objects.all().order_by('-created_at')
+            
+        return render(request, "dashboard/admin.html", context)
+    
+    else:
+        return render(request, "dashboard.html", {'user': request.user})

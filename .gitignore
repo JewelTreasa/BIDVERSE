@@ -44,3 +44,8 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# Temporary files and logs
+push_*.txt
+push_output.txt
+bidverse.txt

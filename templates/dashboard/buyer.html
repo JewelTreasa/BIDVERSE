@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buyer Dashboard - BidVerse</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .dashboard-container {
+            padding: 120px 0 60px;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 30px;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 24px;
+            height: fit-content;
+        }
+
+        .user-profile {
+            text-align: center;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 24px;
+        }
+
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            background: #e0f2fe;
+            color: #0369a1;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 16px;
+        }
+
+        .user-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .user-role {
+            font-size: 14px;
+            color: #666;
+            background: #e0f2fe;
+            color: #075985;
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav-item {
+            margin-bottom: 8px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: #555;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: #e0f2fe;
+            color: #075985;
+        }
+
+        .nav-link i {
+            margin-right: 12px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-icon.green {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .stat-icon.blue {
+            background: #e0f2fe;
+            color: #0284c7;
+        }
+
+        .stat-icon.purple {
+            background: #f3e8ff;
+            color: #9333ea;
+        }
+
+        .stat-info h3 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .stat-info p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .card-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .action-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .action-table th {
+            text-align: left;
+            padding: 12px;
+            color: #666;
+            font-weight: 500;
+            border-bottom: 1px solid #eee;
+        }
+
+        .action-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #f5f5f5;
+            color: #333;
+        }
+
+        /* Profile Dropdown Styles (Synced) */
+        .profile-dropdown {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-greeting-text {
+            font-weight: 500;
+            color: #374151;
+            font-size: 0.95rem;
+        }
+
+        .profile-icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.8rem;
+            color: #333;
+            padding: 0.5rem;
+            transition: color 0.3s;
+            display: flex;
+            align-items: center;
+        }
+
+        .profile-icon-btn:hover {
+            color: #2563eb;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 120%;
+            background-color: white;
+            min-width: 240px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            z-index: 1000;
+            border: 1px solid #f3f4f6;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-header {
+            padding: 1rem;
+            border-bottom: 1px solid #f3f4f6;
+            background-color: #f9fafb;
+        }
+
+        .user-name-drop {
+            display: block;
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 1rem;
+        }
+
+        .user-email-drop {
+            display: block;
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            color: #374151;
+            text-decoration: none;
+            transition: background-color 0.2s, color 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f3f4f6;
+            color: #2563eb;
+        }
+
+        .dropdown-item i {
+            width: 24px;
+            margin-right: 0.5rem;
+            text-align: center;
+            color: #9ca3af;
+        }
+
+        .dropdown-item:hover i {
+            color: #2563eb;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <svg class="logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 5C20 5 12 10 12 20C12 25 16 30 20 32C24 30 28 25 28 20C28 10 20 5 20 5Z" fill="#2e7d32"
+                        fill-opacity="0.15" />
+                    <path d="M20 5C20 5 28 10 28 20C28 25 24 30 20 32V5Z" fill="#2e7d32" />
+                    <path d="M20 18L28 18L28 22L20 22L20 18Z" fill="#1b5e20" />
+                    <rect x="18" y="15" width="4" height="12" rx="2" fill="#1b5e20" />
+                    <circle cx="20" cy="35" r="2" fill="#2e7d32" />
+                </svg>
+                <span>Bid<span class="highlight">Verse</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/#auctions">Auctions</a>
+                <a href="/contact/">Contact</a>
+            </div>
+            <div class="nav-buttons">
+                <span class="user-name-nav">Hi, {{ user.first_name }}</span>
+                <div class="profile-dropdown">
+                    <button class="profile-icon-btn" onclick="toggleProfileDropdown()" aria-label="Profile">
+                        <i class="fas fa-user-circle"></i>
+                    </button>
+                    <div class="dropdown-menu" id="profileDropdown">
+                        <div class="dropdown-header">
+                            <span class="user-name-drop">{{ user.first_name }} {{ user.last_name }}</span>
+                            <span class="user-email-drop">{{ user.email }}</span>
+                        </div>
+                        <a href="{% url 'dashboard' %}" class="dropdown-item"><i class="fas fa-columns"></i>
+                            Dashboard</a>
+                        <a href="{% url 'logout' %}" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> Log
+                            Out</a>
+                    </div>
+                </div>
+            </div>
+            <button class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <section class="dashboard-container">
+        <div class="container dashboard-grid">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <h3 class="user-name">{{ user.get_full_name|default:user.email }}</h3>
+                    <span class="user-role">BUYER</span>
+                </div>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="?section=dashboard" class="nav-link {% if section == 'dashboard' %}active{% endif %}">
+                            <i class="fas fa-th-large"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="?section=bids" class="nav-link {% if section == 'bids' %}active{% endif %}">
+                            <i class="fas fa-gavel"></i> My Bids
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="?section=watchlist" class="nav-link {% if section == 'watchlist' %}active{% endif %}">
+                            <i class="fas fa-heart"></i> Watchlist
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="?section=won" class="nav-link {% if section == 'won' %}active{% endif %}">
+                            <i class="fas fa-trophy"></i> Won Auctions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="?section=orders" class="nav-link {% if section == 'orders' %}active{% endif %}">
+                            <i class="fas fa-file-invoice"></i> Orders
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="?section=settings" class="nav-link {% if section == 'settings' %}active{% endif %}">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                    </li>
+                </ul>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                {% if section == 'dashboard' or not section %}
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="fas fa-gavel"></i></div>
+                        <div class="stat-info">
+                            <h3>{{ active_bids_count|default:"0" }}</h3>
+                            <p>Active Bids</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i class="fas fa-trophy"></i></div>
+                        <div class="stat-info">
+                            <h3>{{ won_auctions_count|default:"0" }}</h3>
+                            <p>Auctions Won</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon purple"><i class="fas fa-wallet"></i></div>
+                        <div class="stat-info">
+                            <h3>₹0</h3>
+                            <p>Total Spent</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Bids -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>My Recent Bids</h2>
+                        <a href="/#auctions" class="btn btn-outline btn-sm">Browse More</a>
+                    </div>
+                    <table class="action-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>My Bid</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bid in recent_bids %}
+                            <tr>
+                                <td>{{ bid.listing.commodity }}</td>
+                                <td>₹{{ bid.amount }}</td>
+                                <td>{{ bid.timestamp|date:"M d, H:i" }}</td>
+                                <td>
+                                    {% if bid.amount >= bid.listing.current_highest_bid %}
+                                    <span style="color: green; font-weight: 500;">Leading</span>
+                                    {% else %}
+                                    <span style="color: red; font-weight: 500;">Outbid</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 2rem; color: #666;">
+                                    No bids yet. <a href="/#auctions" style="color: var(--primary-green);">Start
+                                        bidding!</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% elif section == 'bids' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>All My Bids</h2>
+                        <a href="/#auctions" class="btn btn-primary btn-sm">Find more Auctions</a>
+                    </div>
+                    <table class="action-table">
+                        <thead>
+                            <tr>
+                                <th>Listing</th>
+                                <th>Bid Amount</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bid in bids %}
+                            <tr>
+                                <td>{{ bid.listing.commodity }}</td>
+                                <td>₹{{ bid.amount }}</td>
+                                <td>{{ bid.timestamp|date:"M d, Y" }}</td>
+                                <td>
+                                    {% if bid.listing.is_active %}
+                                    {% if bid.amount >= bid.listing.current_highest_bid %}
+                                    <span style="color: green; font-weight: 500;">Leading</span>
+                                    {% else %}
+                                    <span style="color: red; font-weight: 500;">Outbid</span>
+                                    {% endif %}
+                                    {% else %}
+                                    Closed
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 20px;">No bids found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% elif section == 'won' or section == 'orders' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>{% if section == 'won' %}Won Auctions{% else %}Purchase History{% endif %}</h2>
+                    </div>
+                    <table class="action-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Winning Bid</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for listing in won_listings %}
+                            <tr>
+                                <td>{{ listing.commodity }}</td>
+                                <td>₹{{ listing.current_highest_bid }}</td>
+                                <td>{{ listing.end_time|date:"M d, Y" }}</td>
+                                <td><span style="color: #2e7d32; font-weight: 500;">Won</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 40px; color: #666;">
+                                    No won auctions found. <a href="/#auctions"
+                                        style="color: var(--primary-green);">Browse active auctions!</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% elif section == 'watchlist' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>My Watchlist</h2>
+                        <span class="badge"
+                            style="background: #e0f2fe; color: #075985; padding: 4px 12px; border-radius: 20px; font-size: 14px;">Beta</span>
+                    </div>
+                    <div style="text-align: center; padding: 60px;">
+                        <i class="fas fa-heart"
+                            style="font-size: 48px; color: #fee2e2; margin-bottom: 20px; display: block;"></i>
+                        <p style="color: #666;">Items you heart will appear here. For now, check your <strong>My
+                                Bids</strong> section to track active interests.</p>
+                        <a href="?section=bids" class="btn btn-outline"
+                            style="margin-top: 20px; display: inline-block;">Go to My Bids</a>
+                    </div>
+                </div>
+
+                {% elif section == 'settings' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>Personal Settings</h2>
+                    </div>
+                    <form style="display: grid; gap: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">First Name</label>
+                                <input type="text" value="{{ user.first_name }}"
+                                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Last Name</label>
+                                <input type="text" value="{{ user.last_name }}"
+                                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Email Address</label>
+                            <input type="email" value="{{ user.email }}" disabled
+                                style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 8px; background: #fafafa;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Contact Number</label>
+                            <input type="text" value="{{ user.phone|default:'' }}"
+                                style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                        </div>
+                        <button type="button" class="btn btn-primary" style="background: #2563eb; padding: 14px;">Save
+                            Changes</button>
+                    </form>
+                </div>
+
+                {% else %}
+                <div class="content-card" style="text-align: center; padding: 60px;">
+                    <i class="fas fa-tools"
+                        style="font-size: 48px; color: #ddd; margin-bottom: 20px; display: block;"></i>
+                    <h2>{{ section|title }} Section</h2>
+                    <p style="color: #666;">We're making this section better for you. Check back soon!</p>
+                    <a href="?section=dashboard" class="btn btn-outline"
+                        style="margin-top: 20px; display: inline-block;">Back to Dashboard</a>
+                </div>
+                {% endif %}
+            </main>
+        </div>
+    </section>
+
+    <script src="/assets/js/main.js?v=2"></script>
+    <script src="/assets/js/script.js?v=2"></script>
+</body>
+
+</html>

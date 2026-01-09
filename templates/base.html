@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,9 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
 
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -16,11 +19,22 @@
     <!-- BidVerse Styles -->
     <link rel="stylesheet" href="/assets/css/styles.css">
 </head>
+
 <body>
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container nav-container">
-            <a href="{% url 'home' %}" class="logo">Bid<span class="highlight">Verse</span></a>
+            <a href="{% url 'home' %}" class="logo">
+                <svg class="logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 5C20 5 12 10 12 20C12 25 16 30 20 32C24 30 28 25 28 20C28 10 20 5 20 5Z" fill="#2e7d32"
+                        fill-opacity="0.15" />
+                    <path d="M20 5C20 5 28 10 28 20C28 25 24 30 20 32V5Z" fill="#2e7d32" />
+                    <path d="M20 18L28 18L28 22L20 22L20 18Z" fill="#1b5e20" />
+                    <rect x="18" y="15" width="4" height="12" rx="2" fill="#1b5e20" />
+                    <circle cx="20" cy="35" r="2" fill="#2e7d32" />
+                </svg>
+                <span>Bid<span class="highlight">Verse</span></span>
+            </a>
             <div class="nav-links">
                 <a href="#how-it-works">How It Works</a>
                 <a href="#auctions">Auctions</a>
@@ -28,8 +42,29 @@
                 <a href="#contact">Contact</a>
             </div>
             <div class="nav-buttons">
+                {% if user.is_authenticated %}
+                <span class="user-name-nav">Hi, {{ user.first_name }}</span>
+                <div class="profile-dropdown">
+                    <button class="profile-icon-btn" onclick="toggleProfileDropdown()" aria-label="Profile">
+                        <i class="fas fa-user-circle"></i>
+                    </button>
+                    <div class="dropdown-menu" id="profileDropdown">
+                        <div class="dropdown-header">
+                            <span class="user-name">{{ user.first_name }} {{ user.last_name }}</span>
+                            <span class="user-email">{{ user.email }}</span>
+                        </div>
+                        <a href="{% url 'dashboard' %}" class="dropdown-item">
+                            <i class="fas fa-columns"></i> Dashboard
+                        </a>
+                        <a href="{% url 'logout' %}" class="dropdown-item">
+                            <i class="fas fa-sign-out-alt"></i> Log Out
+                        </a>
+                    </div>
+                </div>
+                {% else %}
                 <a href="{% url 'login' %}" class="btn btn-outline">Log In</a>
                 <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
+                {% endif %}
             </div>
             <button class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
         </div>
@@ -86,6 +121,27 @@
     <script>
         // Make CSRF token available globally for AJAX requests
         window.CSRF_TOKEN = '{{ csrf_token }}';
+
+        // Profile Dropdown Functionality
+        function toggleProfileDropdown() {
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('show');
+            }
+        }
+
+        window.onclick = function (event) {
+            if (!event.target.closest('.profile-dropdown')) {
+                var dropdowns = document.getElementsByClassName("dropdown-menu");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }
+        }
     </script>
 </body>
+
 </html>

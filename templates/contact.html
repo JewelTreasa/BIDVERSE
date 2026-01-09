@@ -57,20 +57,30 @@
                 <!-- Contact Form -->
                 <div class="contact-form-container">
                     <h2>Send us a Message</h2>
-                    <form class="contact-form">
-                        <div class="form-row-split">
-                            <div class="form-group half-width">
+                    {% if messages %}
+                    {% for message in messages %}
+                    <div
+                        style="padding: 15px; background: #dcfce7; color: #166534; border-radius: 10px; margin-bottom: 20px;">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    <form action="{% url 'contact' %}" method="POST" class="contact-form">
+                        {% csrf_token %}
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
                                 <label for="contact-name">Full Name</label>
                                 <div class="input-with-icon">
                                     <i class="fas fa-user"></i>
-                                    <input type="text" id="contact-name" placeholder="Your Name" required>
+                                    <input type="text" id="contact-name" name="name" placeholder="John Doe" required>
                                 </div>
                             </div>
-                            <div class="form-group half-width">
+                            <div class="form-group">
                                 <label for="contact-email">Email Address</label>
                                 <div class="input-with-icon">
                                     <i class="fas fa-envelope"></i>
-                                    <input type="email" id="contact-email" placeholder="your@email.com" required>
+                                    <input type="email" id="contact-email" name="email" placeholder="john@example.com"
+                                        required>
                                 </div>
                             </div>
                         </div>
@@ -79,7 +89,7 @@
                             <label for="contact-subject">Subject</label>
                             <div class="input-with-icon">
                                 <i class="fas fa-tag"></i>
-                                <select id="contact-subject" required>
+                                <select id="contact-subject" name="subject" required>
                                     <option value="" disabled selected>Select a topic</option>
                                     <option value="support">Technical Support</option>
                                     <option value="partnership">Partnership Inquiry</option>
@@ -92,8 +102,8 @@
 
                         <div class="form-group">
                             <label for="contact-message">Message</label>
-                            <textarea id="contact-message" placeholder="Tell us how we can help..." rows="6"
-                                required></textarea>
+                            <textarea id="contact-message" name="message" placeholder="Tell us how we can help..."
+                                rows="6" required></textarea>
                         </div>
 
                         <button type="submit" class="btn btn-primary btn-block btn-lg">

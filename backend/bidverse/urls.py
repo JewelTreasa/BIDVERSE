@@ -11,9 +11,12 @@ urlpatterns = [
     path('api/auth/', include('accounts.urls')),
 
     # Frontend routes
-    path('', TemplateView.as_view(template_name='index.html'), name='home'),
-    path('contact/', TemplateView.as_view(template_name='contact.html'), name='contact'),
+    path('', account_views.home, name='home'),
+    path('marketplace/', account_views.marketplace, name='marketplace'),
+    path('contact/', account_views.contact, name='contact'),
     path('dashboard/', account_views.dashboard, name='dashboard'),
+    path('auction/<int:listing_id>/', account_views.auction_detail, name='auction_detail'),
+    path('auction/<int:listing_id>/bid/', account_views.place_bid, name='place_bid'),
 
     # Web form views (outside of API namespace)
     path('login/', account_views.login_user, name='login'),

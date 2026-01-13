@@ -74,6 +74,10 @@ img {
     padding: 0 1.5rem;
 }
 
+.hidden {
+    display: none !important;
+}
+
 .section {
     padding: var(--section-padding);
 }
@@ -470,7 +474,7 @@ img {
 /* Auction Cards */
 .auction-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 2rem;
 }
 
@@ -541,6 +545,17 @@ img {
     color: var(--text-dark);
 }
 
+.bg-upcoming {
+    background-color: var(--accent-yellow) !important;
+}
+
+.no-auctions {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
 .card-content {
     padding: 1.5rem;
 }
@@ -548,6 +563,9 @@ img {
 .card-content h3 {
     font-size: 1.25rem;
     margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .location {
@@ -568,6 +586,15 @@ img {
     background: #f9f9f9;
     padding: 0.75rem;
     border-radius: 8px;
+    gap: 10px;
+    overflow: hidden;
+}
+
+.bid-info .current-bid,
+.bid-info .time-left {
+    flex: 1;
+    min-width: 0;
+    /* Allow shrinking */
 }
 
 .bid-info .label {
@@ -575,17 +602,28 @@ img {
     font-size: 0.75rem;
     color: var(--text-gray);
     margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .bid-info .price {
     font-weight: 700;
     color: var(--primary-dark);
     font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
 }
 
-.bid-info .timer {
+.auction-time {
+    display: block;
+    font-size: 11px;
     font-weight: 600;
-    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .text-highlight {
@@ -826,6 +864,24 @@ img {
 }
 
 /* Responsive */
+
+/* Alert Messages */
+.alert {
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.alert-success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 @media (max-width: 992px) {
     .hero h1 {
         font-size: 2.75rem;
@@ -1578,4 +1634,52 @@ select,
 textarea,
 label {
     font-family: 'Outfit', sans-serif;
-}
+
+    /* Bid Info V2 - Refactored from inline styles to prevent tag splitting */
+    .bid-info-master {
+        display: block;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+
+    .bid-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .bid-row.margin-bottom {
+        margin-bottom: 8px;
+    }
+
+    .bid-label-v2 {
+        margin-bottom: 0;
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .bid-price-v2 {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--primary-green);
+    }
+
+    .bid-time-v2 {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+
+    .bid-price-dark {
+        color: var(--primary-dark) !important;
+    }
+
+    /* Base styles for labels */
+    .label-v2 {
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 14px;
+        color: #64748b;
+    }

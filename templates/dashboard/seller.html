@@ -295,16 +295,119 @@
             color: #2563eb;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
+        .delete-btn:hover {
+            color: #991b1b !important;
+        }
 
+        label input[type="checkbox"]:checked+div {
+            color: var(--primary-green);
+        }
+
+        label:has(input[type="checkbox"]:checked) {
+            border-color: var(--primary-green) !important;
+            background: #ecfccb;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transform: scale(0.95);
+            animation: scaleIn 0.2s ease-out forwards;
+        }
+
+        @keyframes scaleIn {
             to {
-                opacity: 1;
-                transform: translateY(0);
+                transform: scale(1);
             }
+        }
+
+        .modal-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin: 0 auto 20px;
+        }
+
+        .modal-icon.warning {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 8px;
+            font-family: 'Playfair Display', serif;
+        }
+
+        .modal-text {
+            color: #6b7280;
+            font-size: 15px;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .btn-modal-cancel {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            background: white;
+            color: #374151;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-modal-cancel:hover {
+            background: #f3f4f6;
+        }
+
+        .btn-modal-delete {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            background: #dc2626;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-modal-delete:hover {
+            background: #b91c1c;
+            transform: translateY(-1px);
         }
     </style>
 </head>
@@ -430,6 +533,7 @@
                                 <th>Commodity</th>
                                 <th>Base Price</th>
                                 <th>Highest Bid</th>
+                                <th>Starts At</th>
                                 <th>Ends In</th>
                             </tr>
                         </thead>
@@ -439,11 +543,32 @@
                                 <td>{{ listing.commodity }}</td>
                                 <td>₹{{ listing.base_price }}/kg</td>
                                 <td>₹{{ listing.current_highest_bid|default:listing.base_price }}/kg</td>
-                                <td style="color: #c2410c;">{{ listing.end_time|timeuntil }}</td>
+                                <td>
+                                    {% if listing.morning_session and not listing.evening_session %}
+                                    {{ listing.listing_date|date:"M d" }} 9:30 AM
+                                    {% elif listing.evening_session and not listing.morning_session %}
+                                    {{ listing.listing_date|date:"M d" }} 2:15 PM
+                                    {% elif listing.morning_session and listing.evening_session %}
+                                    {{ listing.listing_date|date:"M d" }} 9:30 AM & 2:15 PM
+                                    {% else %}
+                                    {{ listing.listing_date|date:"M d, H:i" }}
+                                    {% endif %}
+                                </td>
+                                <td style="color: #c2410c;">
+                                    {% if listing.morning_session and not listing.evening_session %}
+                                    1:30 PM
+                                    {% elif listing.evening_session and not listing.morning_session %}
+                                    6:15 PM
+                                    {% elif listing.morning_session and listing.evening_session %}
+                                    6:15 PM
+                                    {% else %}
+                                    {{ listing.end_time|date:"g:i A" }}
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" style="text-align: center; padding: 30px; color: #666;">No active
+                                <td colspan="5" style="text-align: center; padding: 30px; color: #666;">No active
                                     listings found. <a href="?section=add_listing"
                                         style="color: var(--primary-green);">Create one now?</a></td>
                             </tr>
@@ -458,6 +583,12 @@
                         <h2>All My Listings</h2>
                         <a href="?section=add_listing" class="btn btn-primary btn-sm">+ New Listing</a>
                     </div>
+                    {% csrf_token %}
+                    <style>
+                        input[name="csrfmiddlewaretoken"] {
+                            display: none;
+                        }
+                    </style>
                     <table class="action-table">
                         <thead>
                             <tr>
@@ -465,6 +596,7 @@
                                 <th>Base Price</th>
                                 <th>Status</th>
                                 <th>Created At</th>
+                                <th style="text-align: center; width: 60px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -475,10 +607,17 @@
                                 <td>{% if listing.is_active %}<span style="color: green;">Active</span>{% else %}<span
                                         style="color: gray;">Closed</span>{% endif %}</td>
                                 <td>{{ listing.created_at|date:"M d, Y" }}</td>
+                                <td style="text-align: center;">
+                                    <button class="delete-btn" onclick="confirmDelete({{ listing.id }})"
+                                        title="Delete listing"
+                                        style="background: none; border: none; cursor: pointer; color: #dc2626; font-size: 18px; padding: 4px 8px; transition: color 0.2s;">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" style="text-align: center; padding: 30px; color: #666;">You haven't
+                                <td colspan="5" style="text-align: center; padding: 30px; color: #666;">You haven't
                                     created any listings yet.</td>
                             </tr>
                             {% endfor %}
@@ -491,7 +630,7 @@
                     <div class="card-header">
                         <h2>Add New Listing</h2>
                     </div>
-                    <form action="{% url 'dashboard' %}?section=add_listing" method="POST"
+                    <form action="{% url 'dashboard' %}?section=add_listing" method="POST" enctype="multipart/form-data"
                         style="display: grid; gap: 20px;">
                         {% csrf_token %}
                         <div class="form-group">
@@ -525,16 +664,48 @@
                                     style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                             </div>
                             <div class="form-group">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Auction End
-                                    Time</label>
-                                <input type="datetime-local" name="end_time" required
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Listing
+                                    Date</label>
+                                <input type="date" name="listing_date" value="{% now 'Y-m-d' %}"
                                     style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 12px; font-weight: 500;">Select
+                                Session(s)</label>
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                <label
+                                    style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #ddd; border-radius: 8px; transition: all 0.2s;">
+                                    <input type="checkbox" name="morning_session"
+                                        style="width: 20px; height: 20px; cursor: pointer;">
+                                    <div>
+                                        <strong>Morning Session</strong>
+                                        <div style="font-size: 12px; color: #666;">9:30 AM - 1:30 PM</div>
+                                    </div>
+                                </label>
+                                <label
+                                    style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #ddd; border-radius: 8px; transition: all 0.2s;">
+                                    <input type="checkbox" name="evening_session"
+                                        style="width: 20px; height: 20px; cursor: pointer;">
+                                    <div>
+                                        <strong>Evening Session</strong>
+                                        <div style="font-size: 12px; color: #666;">2:15 PM - 6:15 PM</div>
+                                    </div>
+                                </label>
+                            </div>
+                            <small style="color: #666; margin-top: 8px; display: block;">You can select both sessions.
+                                Auction will automatically end at the appropriate time.</small>
                         </div>
                         <div class="form-group">
                             <label style="display: block; margin-bottom: 8px; font-weight: 500;">Description</label>
                             <textarea name="description" rows="4" placeholder="Tell buyers about your produce..."
                                 style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Upload Image of
+                                Product</label>
+                            <input type="file" name="image" accept="image/*"
+                                style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                         </div>
                         <button type="submit" class="btn btn-primary" style="padding: 14px;">Publish Listing</button>
                     </form>
@@ -621,8 +792,84 @@
         </div>
     </section>
 
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon warning">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="modal-title">Delete Listing?</h3>
+            <p class="modal-text">Are you sure you want to delete this listing? This action is permanent and cannot be
+                undone.</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+                <button type="button" class="btn-modal-delete" id="confirmDeleteBtn">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/assets/js/main.js?v=2"></script>
     <script src="/assets/js/script.js?v=2"></script>
+    <script>
+        let targetListingId = null;
+
+        function confirmDelete(listingId) {
+            targetListingId = listingId;
+            const modal = document.getElementById('deleteModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+            targetListingId = null;
+        }
+
+        document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+            if (targetListingId) {
+                // Create a form to submit the delete request
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/listing/${targetListingId}/delete/`;
+
+                // Add CSRF token
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                if (csrfToken) {
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = 'csrfmiddlewaretoken';
+                    csrfInput.value = csrfToken.value;
+                    form.appendChild(csrfInput);
+                } else {
+                    // Try to get CSRF token from cookies as fallback
+                    const csrfCookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+                    if (csrfCookie) {
+                        const csrfInput = document.createElement('input');
+                        csrfInput.type = 'hidden';
+                        csrfInput.name = 'csrfmiddlewaretoken';
+                        csrfInput.value = csrfCookie.split('=')[1];
+                        form.appendChild(csrfInput);
+                    }
+                }
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('deleteModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeDeleteModal();
+            }
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', function (event) {
+            if (event.key === "Escape") {
+                closeDeleteModal();
+            }
+        });
+    </script>
 </body>
 
 </html>

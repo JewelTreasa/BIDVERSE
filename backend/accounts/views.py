@@ -14,15 +14,195 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.contrib import messages
 from django.utils import timezone
+from datetime import datetime, time, timedelta
+from django.db.models import Q
+from django.http import JsonResponse 
 # Use our custom User model
 from django.contrib.auth import get_user_model
-from .models import Listing, Bid
+from .models import Listing, Bid, NotificationSubscription
 User = get_user_model()
 
+# Session timing constants
+MORNING_START = time(9, 30)  # 9:30 AM
+MORNING_END = time(13, 30)    # 1:30 PM
+EVENING_START = time(14, 15) # 2:15 PM
+EVENING_END = time(18, 15)   # 6:15 PM
+BREAK_START = time(13, 30)  # 1:30 PM
+BREAK_END = time(14, 15)     # 2:15 PM
+
+def get_current_session_info():
+    """Returns current session status: 'morning', 'evening', 'break', or 'closed'"""
+    now = timezone.now()
+    current_time = now.time()
+    current_date = now.date()
+    
+    if MORNING_START <= current_time < MORNING_END:
+        return {
+            'session': 'morning',
+            'is_active': True,
+            'end_time': datetime.combine(current_date, MORNING_END),
+            'is_break': False
+        }
+    elif BREAK_START <= current_time < BREAK_END:
+        return {
+            'session': 'break',
+            'is_active': False,
+            'next_session_start': datetime.combine(current_date, EVENING_START),
+            'is_break': True
+        }
+    elif EVENING_START <= current_time < EVENING_END:
+        return {
+            'session': 'evening',
+            'is_active': True,
+            'end_time': datetime.combine(current_date, EVENING_END),
+            'is_break': False
+        }
+    else:
+        # Before morning or after evening
+        if current_time < MORNING_START:
+            return {
+                'session': 'closed',
+                'is_active': False,
+                'next_session_start': datetime.combine(current_date, MORNING_START),
+                'is_break': False
+            }
+        else:
+            # After evening session, next morning
+            next_date = current_date + timedelta(days=1)
+            return {
+                'session': 'closed',
+                'is_active': False,
+                'next_session_start': datetime.combine(next_date, MORNING_START),
+                'is_break': False
+            }
+
+def calculate_listing_end_time(selected_date, morning_session, evening_session):
+    """Calculate end_time based on selected sessions"""
+    if morning_session and evening_session:
+        # Both sessions selected - ends at evening end time
+        return datetime.combine(selected_date, EVENING_END)
+    elif morning_session:
+        # Only morning - ends at morning end time
+        return datetime.combine(selected_date, MORNING_END)
+    elif evening_session:
+        # Only evening - ends at evening end time
+        return datetime.combine(selected_date, EVENING_END)
+    else:
+        # Default to evening if nothing selected (shouldn't happen with validation)
+        return datetime.combine(selected_date, EVENING_END)
+
+def send_auction_notifications():
+    """Check for auctions starting now and send emails to subscribed users"""
+    now = timezone.now()
+    # Check for auctions that have started in the last few minutes but notification not sent
+    # We'll consider 'started' as start_time <= now
+    
+    # This is a bit complex because start_time is a property, not a field.
+    # We can fetch active listings for today and filter in python, or optimize query.
+    # For now, let's fetch active listings for today where notification_sent=False
+    
+    today = now.date()
+    listings = Listing.objects.filter(
+        is_active=True,
+        end_time__date=today,
+        notification_sent=False
+    )
+    
+    # We need to send notifications if start_time <= now
+    for listing in listings:
+        if listing.start_time <= now:
+            # Get subscribers
+            subscriptions = NotificationSubscription.objects.filter(listing=listing)
+            if subscriptions.exists():
+                recipient_list = [sub.user.email for sub in subscriptions]
+                
+                subject = f"Auction Started: {listing.commodity}"
+                message = f"""
+                The auction for {listing.commodity} has started!
+                
+                Base Price: ₹{listing.base_price}
+                Quantity: {listing.quantity} {listing.unit}
+                
+                Place your bid now: http://localhost:8000/auction/{listing.id}/
+                """
+                
+                try:
+                    send_mail(
+                        subject,
+                        message,
+                        settings.EMAIL_HOST_USER,
+                        recipient_list,
+                        fail_silently=True
+                    )
+                    print(f"Sent notifications for listing {listing.id} to {len(recipient_list)} users.")
+                except Exception as e:
+                    print(f"Error sending notifications: {e}")
+            
+            # Mark as sent regardless to avoid loops
+            listing.notification_sent = True
+            listing.save()
+
+def auto_end_expired_auctions():
+    """Automatically deactivate auctions that have passed their end time"""
+    # Also trigger notifications
+    send_auction_notifications()
+
+    now = timezone.now()
+    today = now.date()
+    current_time = now.time()
+    
+    # End morning-only auctions that have passed 1:30 PM
+    if current_time >= MORNING_END:
+        Listing.objects.filter(
+            is_active=True,
+            morning_session=True,
+            evening_session=False,
+            end_time__date=today
+        ).update(is_active=False)
+    
+    # End evening-only auctions that have passed 6:15 PM
+    if current_time >= EVENING_END:
+        Listing.objects.filter(
+            is_active=True,
+            evening_session=True,
+            end_time__date=today
+        ).update(is_active=False)
+
 def home(request):
-    """Home page view showing latest auctions"""
-    latest_auctions = Listing.objects.filter(is_active=True).order_by('-created_at')[:3]
-    return render(request, 'index.html', {'latest_auctions': latest_auctions})
+    """Home page view showing latest auctions for current session"""
+    # Auto-end expired auctions
+    auto_end_expired_auctions()
+    
+    session_info = get_current_session_info()
+    now = timezone.now()
+    today = now.date()
+    
+    today = now.date()
+    
+    # Fetch all active listings for today (Live & Upcoming)
+    # MODIFIED: Changed filter to show all future active auctions, not just 'today'
+    latest_auctions = Listing.objects.filter(
+        is_active=True,
+        end_time__gt=now
+    ).order_by('end_time')[:6]
+
+    # Get user subscriptions if logged in
+    subscribed_listing_ids = []
+    if request.user.is_authenticated:
+        subscribed_listing_ids = list(NotificationSubscription.objects.filter(
+            user=request.user,
+            listing__in=latest_auctions
+        ).values_list('listing_id', flat=True))
+    
+    # Attach subscription status to auctions for template
+    for auction in latest_auctions:
+        auction.is_subscribed = auction.id in subscribed_listing_ids
+    
+    return render(request, 'index.html', {
+        'latest_auctions': latest_auctions,
+        'session_info': session_info,
+        'now': now
+    })
 
 def contact(request):
     """Contact page view with form handling"""
@@ -33,15 +213,86 @@ def contact(request):
     return render(request, 'contact.html')
 
 def marketplace(request):
-    """View all active auctions"""
-    all_auctions = Listing.objects.filter(is_active=True).order_by('-created_at')
-    return render(request, 'marketplace.html', {'all_auctions': all_auctions})
+    """View all active auctions with session-based filtering"""
+    # Auto-end expired auctions
+    auto_end_expired_auctions()
+    
+    session_info = get_current_session_info()
+    now = timezone.now()
+    today = now.date()
+    
+    # Live auctions for current session
+    if session_info['is_active']:
+        if session_info['session'] == 'morning':
+            live_auctions = Listing.objects.filter(
+                is_active=True,
+                morning_session=True,
+                end_time__date=today
+            ).order_by('-created_at')
+        else:  # evening
+            live_auctions = Listing.objects.filter(
+                is_active=True
+            ).filter(
+                Q(evening_session=True, end_time__date=today) |
+                Q(morning_session=True, evening_session=True, end_time__date=today)
+            ).order_by('-created_at')
+    else:
+        live_auctions = Listing.objects.none()
+    
+    # Upcoming evening auctions (shown during break time)
+    upcoming_evening = Listing.objects.none()
+    if session_info['is_break']:
+        upcoming_evening = Listing.objects.filter(
+            is_active=True,
+            evening_session=True,
+            end_time__date=today
+        ).exclude(morning_session=True).order_by('-created_at')
+    
+    # Ended auctions today
+    ended_today = Listing.objects.filter(
+        is_active=False,
+        end_time__date=today
+    ).order_by('-end_time')
+    
+    return render(request, 'marketplace.html', {
+        'live_auctions': live_auctions,
+        'upcoming_evening': upcoming_evening,
+        'ended_today': ended_today,
+        'session_info': session_info
+    })
 
 def auction_detail(request, listing_id):
     """View details of a specific auction"""
     listing = get_object_or_404(Listing, id=listing_id)
     bid_history = listing.bids.all().order_by('-timestamp')[:5]
     return render(request, 'auction_detail.html', {'listing': listing, 'bid_history': bid_history})
+
+@login_required
+def toggle_notification(request, listing_id):
+    """Toggle notification subscription for an auction"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=405)
+        
+    if request.user.user_type != 'BUYER':
+        return JsonResponse({'error': 'Only buyers can subscribe'}, status=403)
+        
+    listing = get_object_or_404(Listing, id=listing_id)
+    
+    # Toggle subscription
+    subscription, created = NotificationSubscription.objects.get_or_create(
+        user=request.user,
+        listing=listing
+    )
+    
+    if not created:
+        # If already exists, delete it (unsubscribe)
+        subscription.delete()
+        subscribed = False
+    else:
+        subscribed = True
+        
+    return JsonResponse({'subscribed': subscribed})
+
 @login_required
 def place_bid(request, listing_id):
     """Process a new bid"""
@@ -52,6 +303,11 @@ def place_bid(request, listing_id):
     listing = get_object_or_404(Listing, id=listing_id)
     if not listing.is_active or listing.end_time < timezone.now():
         messages.error(request, "This auction has ended.")
+        return redirect('auction_detail', listing_id=listing_id)
+        
+    # Check if auction has started
+    if listing.start_time > timezone.now():
+        messages.error(request, f"This auction starts at {listing.start_time.strftime('%I:%M %p')}")
         return redirect('auction_detail', listing_id=listing_id)
         
     bid_amount = request.POST.get('amount')
@@ -289,8 +545,8 @@ def login_user(request):
         if user is not None:
             print(f"Authentication successful for user: {user.email}")
             login(request, user)
-            print("Redirecting to dashboard...")
-            return redirect("dashboard")
+            print("Redirecting to home...")
+            return redirect("home")
         else:
             # Check if user exists but password is wrong, or user doesn't exist
             user_exists = User.objects.filter(email=email).exists()
@@ -460,15 +716,41 @@ def dashboard(request):
     
     if user_type == 'FARMER':
         if request.method == 'POST' and section == 'add_listing':
+            # Get session selections
+            morning_session = request.POST.get('morning_session') == 'on'
+            evening_session = request.POST.get('evening_session') == 'on'
+            
+            # Validate at least one session is selected
+            if not morning_session and not evening_session:
+                messages.error(request, "Please select at least one session (Morning or Evening).")
+                return redirect(reverse('dashboard') + '?section=add_listing')
+            
+            # Get selected date (default to today)
+            selected_date_str = request.POST.get('listing_date')
+            if selected_date_str:
+                try:
+                    selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+                except:
+                    selected_date = timezone.now().date()
+            else:
+                selected_date = timezone.now().date()
+            
+            # Calculate end_time based on sessions
+            end_time = calculate_listing_end_time(selected_date, morning_session, evening_session)
+            
             Listing.objects.create(
                 seller=request.user,
                 commodity=request.POST.get('commodity'),
                 quantity=request.POST.get('quantity'),
                 unit=request.POST.get('unit'),
                 base_price=request.POST.get('base_price'),
-                end_time=request.POST.get('end_time'),
-                description=request.POST.get('description')
+                end_time=end_time,
+                description=request.POST.get('description'),
+                image=request.FILES.get('image'),
+                morning_session=morning_session,
+                evening_session=evening_session
             )
+            messages.success(request, "Listing created successfully!")
             return redirect(reverse('dashboard') + '?section=listings')
         
         if section == 'listings':
@@ -529,3 +811,31 @@ def dashboard(request):
     
     else:
         return render(request, "dashboard.html", {'user': request.user})
+
+@login_required
+def delete_listing(request, listing_id):
+    """Delete a listing - seller can delete own, admin can delete any"""
+    listing = get_object_or_404(Listing, id=listing_id)
+    
+    # Permission Check
+    is_owner = listing.seller == request.user
+    is_admin = request.user.user_type == 'ADMIN'
+    
+    if not (is_owner or is_admin):
+        messages.error(request, "You don't have permission to delete this listing.")
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        listing.delete()
+        messages.success(request, "Listing deleted successfully.")
+        
+        # Redirect based on user type
+        if is_admin:
+            return redirect(reverse('dashboard') + '?section=auctions')
+        else:
+            return redirect(reverse('dashboard') + '?section=listings')
+    
+    # If GET request
+    if is_admin:
+         return redirect(reverse('dashboard') + '?section=auctions')
+    return redirect(reverse('dashboard') + '?section=listings')

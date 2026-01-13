@@ -130,3 +130,87 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         }
     });
 });
+
+// Live Auction Status Manager
+function checkAuctionStatus() {
+    const cards = document.querySelectorAll('.auction-card');
+    const now = new Date();
+
+    cards.forEach(card => {
+        const startTimeStr = card.dataset.startTime;
+        const endTimeStr = card.dataset.endTime;
+        if (!startTimeStr) return;
+
+        const startTime = new Date(startTimeStr);
+        // Date comparison
+        const isLive = now >= startTime;
+
+        const liveBadge = card.querySelector('.badge.live');
+        const upcomingBadge = card.querySelector('.badge.upcoming');
+        const bidBtn = card.querySelector('.bid-btn');
+        const notifyBtn = card.querySelector('.notify-btn');
+        const bidLabel = card.querySelector('.bid-label');
+        const timeLabel = card.querySelector('.time-label');
+        const timeDisplay = card.querySelector('.auction-time');
+
+        if (isLive) {
+            // Switch to Live Mode
+            if (liveBadge) liveBadge.style.display = '';
+            if (upcomingBadge) upcomingBadge.style.display = 'none';
+            if (bidBtn) bidBtn.style.display = '';
+            if (notifyBtn) notifyBtn.style.display = 'none';
+
+            if (bidLabel) bidLabel.innerText = 'Current Bid';
+            if (timeLabel) timeLabel.innerText = 'Ends At';
+
+            if (timeDisplay && endTimeStr) {
+                const end = new Date(endTimeStr);
+                const h = String(end.getHours()).padStart(2, '0');
+                const m = String(end.getMinutes()).padStart(2, '0');
+                timeDisplay.innerText = `${h}:${m}`;
+            }
+        } else {
+            // Ensure Upcoming Mode
+            if (liveBadge) liveBadge.style.display = 'none';
+            if (upcomingBadge) upcomingBadge.style.display = '';
+            if (bidBtn) bidBtn.style.display = 'none';
+            if (notifyBtn) notifyBtn.style.display = '';
+
+            if (bidLabel) bidLabel.innerText = 'Base Price';
+            if (timeLabel) timeLabel.innerText = 'Starts At';
+
+            if (timeDisplay && startTimeStr) {
+                const start = new Date(startTimeStr);
+                const h = String(start.getHours()).padStart(2, '0');
+                const m = String(start.getMinutes()).padStart(2, '0');
+                timeDisplay.innerText = `${h}:${m}`;
+            }
+        }
+    });
+}
+
+// Run immediately and then every second
+checkAuctionStatus();
+setInterval(checkAuctionStatus, 1000);
+
+// Notify Me Function
+window.toggleNotify = function (btn, auctionId) {
+    if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+    }
+
+    // Toggle state
+    if (btn.classList.contains('active')) {
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class=\'far fa-bell\'></i> Notify Me';
+        btn.style.background = '';
+        btn.style.color = '';
+    } else {
+        btn.classList.add('active');
+        btn.innerHTML = '<i class=\'fas fa-bell\'></i> Set';
+        btn.style.background = '#f39c12';
+        btn.style.color = 'white';
+        alert('You will be notified when this auction starts!');
+    }
+};
+

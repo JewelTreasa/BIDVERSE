@@ -10,7 +10,8 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/styles.css">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -22,7 +23,6 @@
         <div class="container nav-container">
             <a href="/" class="logo">
                 <svg class="logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Modern Stylized Leaf & Gavel Logo -->
                     <path d="M20 5C20 5 12 10 12 20C12 25 16 30 20 32C24 30 28 25 28 20C28 10 20 5 20 5Z" fill="#2e7d32"
                         fill-opacity="0.15" />
                     <path d="M20 5C20 5 28 10 28 20C28 25 24 30 20 32V5Z" fill="#2e7d32" />
@@ -39,6 +39,7 @@
                 <a href="/contact/">Contact</a>
             </div>
             <div class="nav-buttons">
+                <!-- prettier-ignore -->
                 {% if user.is_authenticated %}
                 <span class="user-name-nav">Hi, {{ user.first_name }}</span>
                 <div class="profile-dropdown">
@@ -58,6 +59,7 @@
                         </a>
                     </div>
                 </div>
+                <!-- prettier-ignore -->
                 {% else %}
                 <a href="{% url 'login' %}" class="btn btn-outline">Log In</a>
                 <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
@@ -69,7 +71,7 @@
 
     <section class="hero-section">
         <div class="hero-background">
-            <img src="/assets/images/hero.jpg" alt="Agricultural Farmland">
+            <img src="{% static 'images/hero.jpg' %}" alt="Agricultural Farmland">
             <div class="hero-overlay"></div>
         </div>
 
@@ -79,14 +81,12 @@
                 <h1>Sell & Buy Agricultural Commodities Through <span class="highlight">Smart Auctions</span></h1>
                 <p>The fairest, most transparent marketplace for farmers, traders, and buyers. Connect directly, bid in
                     real-time, and get the best value for your produce.</p>
-
                 <div class="hero-buttons">
                     <a href="{% url 'register' %}" class="btn btn-primary">Start Selling</a>
                     <a href="{% url 'marketplace' %}" class="btn btn-secondary">Browse Auctions</a>
                 </div>
             </div>
         </div>
-
     </section>
 
     <!-- How It Works -->
@@ -127,38 +127,107 @@
             </div>
             <div class="auction-grid">
                 {% for auction in latest_auctions %}
-                <div class="auction-card">
+                <div class="auction-card" data-listing-id="{{ auction.id }}"
+                    data-start-time="{{ auction.start_time|date:'c' }}" data-end-time="{{ auction.end_time|date:'c' }}">
                     <div class="card-image">
-                        <img src="{{ auction.image_url|default:'/assets/images/placeholder-agri.jpg' }}"
-                            alt="{{ auction.commodity }}">
-                        <span class="badge live">Live</span>
+                        <img src="{{ auction.display_image }}" alt="{{ auction.commodity }}">
+                        <span class="badge live {% if auction.start_time > now %}hidden{% endif %}">Live</span>
+                        <span
+                            class="badge upcoming bg-upcoming {% if auction.start_time <= now %}hidden{% endif %}">Upcoming</span>
                     </div>
                     <div class="card-content">
                         <h3>{{ auction.commodity }}</h3>
                         <p class="location"><i class="fas fa-layer-group"></i> {{ auction.quantity }} {{ auction.unit }}
                         </p>
-                        <div class="bid-info">
-                            <div class="current-bid">
-                                <span class="label">Current Bid</span>
-                                <span class="price">₹{{ auction.current_highest_bid|default:auction.base_price }}</span>
+                        <div class="bid-info-master">
+                            <div class="bid-row margin-bottom">
+                                <!-- prettier-ignore -->
+                                <span class="bid-label-v2">{{ auction.display_label }}</span>
+                                <!-- prettier-ignore -->
+                                <span class="bid-price-v2 bid-price-dark">₹{{ auction.display_price }}</span>
                             </div>
-                            <div class="time-left">
-                                <span class="label">Ends At</span>
-                                <span class="timer" style="font-size: 11px;">{{ auction.end_time|date:"M d, H:i"
-                                    }}</span>
+                            <div class="bid-row">
+                                <!-- prettier-ignore -->
+                                <span class="bid-label-v2">{{ auction.time_label }}</span>
+                                <!-- prettier-ignore -->
+                                <span class="bid-time-v2">{{ auction.display_time }}</span>
                             </div>
                         </div>
-                        <a href="{% url 'auction_detail' auction.id %}" class="btn btn-primary btn-block">Place Bid</a>
+                        <div class="card-actions">
+                            <a href="{% url 'auction_detail' auction.id %}"
+                                class="btn btn-primary btn-block bid-btn {% if auction.start_time > now %}hidden{% endif %}">Place
+                                Bid</a>
+                            <button
+                                class="btn btn-outline btn-block notify-btn {% if auction.start_time <= now %}hidden{% endif %}"
+                                onclick="toggleNotify(this)" data-listing-id="{{ auction.id }}"
+                                data-subscribed="{{ auction.is_subscribed|yesno:'true,false' }}">
+                                <!-- prettier-ignore -->
+                                {% if auction.is_subscribed %}
+                                <i class="fas fa-bell"></i> Subscribed
+                                {% else %}
+                                <i class="far fa-bell"></i> Notify Me
+                                {% endif %}
+                            </button>
+                        </div>
                     </div>
                 </div>
                 {% empty %}
-                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666;">
+                <div class="no-auctions">
                     <p>No active auctions at the moment. Check back soon!</p>
                 </div>
                 {% endfor %}
             </div>
         </div>
     </section>
+
+    <script>
+        function toggleNotify(btn) {
+            const listingId = btn.dataset.listingId;
+            fetch(`/listing/${listingId}/notify/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (response.status === 403) {
+                        alert("Please log in as a Buyer to subscribe or ensure your account type is correct.");
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data) return;
+                    if (data.subscribed) {
+                        btn.innerHTML = '<i class="fas fa-bell"></i> Subscribed';
+                        btn.classList.add('subscribed');
+                    } else {
+                        btn.innerHTML = '<i class="far fa-bell"></i> Notify Me';
+                        btn.classList.remove('subscribed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    window.location.href = '/login/';
+                });
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
 
     <!-- Why Choose Us -->
     <section class="section features bg-light" id="features">
@@ -200,7 +269,6 @@
                 <p>Explore wide ranges of agricultural products</p>
             </div>
             <div class="commodities-gallery">
-                <!-- Using placeholder names for classes to be styled with background images -->
                 <div class="commodity-item item-1">
                     <div class="overlay">
                         <h3>Grains</h3>
@@ -317,7 +385,7 @@
     </footer>
 
     <!-- BidVerse Scripts -->
-    <script src="/assets/js/script.js?v=1.1"></script>
+    <script src="{% static 'js/script.js' %}?v=1.1"></script>
 </body>
 
 </html>

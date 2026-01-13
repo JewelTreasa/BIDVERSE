@@ -17,6 +17,8 @@ urlpatterns = [
     path('dashboard/', account_views.dashboard, name='dashboard'),
     path('auction/<int:listing_id>/', account_views.auction_detail, name='auction_detail'),
     path('auction/<int:listing_id>/bid/', account_views.place_bid, name='place_bid'),
+    path('listing/<int:listing_id>/delete/', account_views.delete_listing, name='delete_listing'),
+    path('listing/<int:listing_id>/notify/', account_views.toggle_notification, name='toggle_notification'),
 
     # Web form views (outside of API namespace)
     path('login/', account_views.login_user, name='login'),
@@ -35,4 +37,6 @@ if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     # Serve static assets from the root assets directory
     urlpatterns += static('/assets/', document_root=settings.BASE_DIR.parent / 'assets')
+    # Serve media files (user uploads)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

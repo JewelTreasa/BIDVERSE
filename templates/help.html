@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Help Center - BidVerse{% endblock %}
+
+{% block content %}
+<section class="section" style="background-color: #FFFFFF; padding: 80px 0;">
+    <div class="container">
+        <div class="section-header" style="text-align: left; margin-bottom: 40px;">
+            <h2 style="color: var(--primary-green); font-size: 2.5rem; margin-bottom: 1rem;">Help Center</h2>
+            <p style="color: var(--text-gray); font-size: 1.1rem;">Find answers to frequently asked questions about BidVerse.</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 50px;">
+            <div style="background: #FFFFFF; padding: 30px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fas fa-question-circle"></i> General FAQ</h3>
+                <div style="margin-top: 20px;">
+                    <h5 style="margin-bottom: 5px;">What is BidVerse?</h5>
+                    <p style="font-size: 0.95rem; color: var(--text-gray);">BidVerse is a digital auction platform connecting agricultural producers directly with buyers.</p>
+                </div>
+                <div style="margin-top: 20px;">
+                    <h5 style="margin-bottom: 5px;">How do I join?</h5>
+                    <p style="font-size: 0.95rem; color: var(--text-gray);">You can register as a Buyer or Seller using the "Get Started" button in the navigation bar.</p>
+                </div>
+            </div>
+
+            <div style="background: #FFFFFF; padding: 30px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fas fa-gavel"></i> Bidding Help</h3>
+                <div style="margin-top: 20px;">
+                    <h5 style="margin-bottom: 5px;">How do I place a bid?</h5>
+                    <p style="font-size: 0.95rem; color: var(--text-gray);">Go to the Marketplace, find a live auction, and enter your bid amount on the auction detail page.</p>
+                </div>
+                <div style="margin-top: 20px;">
+                    <h5 style="margin-bottom: 5px;">Can I cancel a bid?</h5>
+                    <p style="font-size: 0.95rem; color: var(--text-gray);">Bids are binding commitments and cannot be cancelled once placed.</p>
+                </div>
+            </div>
+
+            <div style="background: #FFFFFF; padding: 30px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <h3 style="color: var(--primary-green); margin-bottom: 15px;"><i class="fas fa-user-shield"></i> Safety & Security</h3>
+                <div style="margin-top: 20px;">
+                    <h5 style="margin-bottom: 5px;">Is my data secure?</h5>
+                    <p style="font-size: 0.95rem; color: var(--text-gray);">Yes, we use advanced encryption to protect your personal and transaction data.</p>
+                </div>
+                <div style="margin-top: 20px;">
+                    <h5 style="margin-bottom: 5px;">How are users verified?</h5>
+                    <p style="font-size: 0.95rem; color: var(--text-gray);">Our administrators verify seller identities to ensure high quality and trust on the platform.</p>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: var(--primary-green); padding: 40px; border-radius: 12px; text-align: center; color: var(--white);">
+            <h3>Still need help?</h3>
+            <p style="margin: 15px 0 25px; opacity: 0.9;">Our support team is always ready to assist you.</p>
+            <a href="{% url 'contact' %}" class="btn btn-light">Contact Support</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

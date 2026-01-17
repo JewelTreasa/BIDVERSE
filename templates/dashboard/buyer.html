@@ -332,20 +332,45 @@
             </div>
             <div class="nav-buttons">
                 <span class="user-name-nav">Hi, {{ user.first_name }}</span>
-                <div class="profile-dropdown">
-                    <button class="profile-icon-btn" onclick="toggleProfileDropdown()" aria-label="Profile">
-                        <i class="fas fa-user-circle"></i>
-                    </button>
-                    <div class="dropdown-menu" id="profileDropdown">
-                        <div class="dropdown-header">
-                            <span class="user-name-drop">{{ user.first_name }} {{ user.last_name }}</span>
-                            <span class="user-email-drop">{{ user.email }}</span>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <div class="profile-dropdown">
+                        <button class="profile-icon-btn" onclick="toggleProfileDropdown()" aria-label="Profile">
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+                        <div class="dropdown-menu" id="profileDropdown">
+                            <div class="dropdown-header">
+                                <span class="user-name-drop">{{ user.first_name }} {{ user.last_name }}</span>
+                                <span class="user-email-drop">{{ user.email }}</span>
+                            </div>
+                            <a href="{% url 'dashboard' %}" class="dropdown-item">
+                                <i class="fas fa-columns"></i> Dashboard
+                            </a>
+                            <a href="{% url 'logout' %}" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i> Log Out
+                            </a>
                         </div>
-                        <a href="{% url 'dashboard' %}" class="dropdown-item"><i class="fas fa-columns"></i>
-                            Dashboard</a>
-                        <a href="{% url 'logout' %}" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> Log
-                            Out</a>
                     </div>
+                    
+                    {% if user.user_type == 'BUYER' %}
+                    <!-- Notification Dropdown -->
+                    <div class="profile-dropdown">
+                        <button class="profile-icon-btn" onclick="toggleNotificationDropdown()" aria-label="Notifications" style="position: relative;">
+                            <i class="fas fa-bell"></i>
+                            <span id="notif-badge" style="position: absolute; top: 0; right: 0; background: #dc2626; color: white; border-radius: 50%; width: 8px; height: 8px; display: none;"></span>
+                        </button>
+                        <div class="dropdown-menu" id="notificationDropdown" style="width: 300px; right: 0;">
+                            <div class="dropdown-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="user-name-drop">Notifications</span>
+                                <small id="mark-all-read" style="cursor: pointer; color: #2e7d32; display: none;">Mark all read</small>
+                            </div>
+                            <div id="notification-list" style="max-height: 300px; overflow-y: auto;">
+                                <div style="padding: 1rem; text-align: center; color: #666;">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             <button class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
@@ -447,10 +472,18 @@
                                 <td>₹{{ bid.amount }}</td>
                                 <td>{{ bid.timestamp|date:"M d, H:i" }}</td>
                                 <td>
-                                    {% if bid.amount >= bid.listing.current_highest_bid %}
-                                    <span style="color: green; font-weight: 500;">Leading</span>
+                                    {% if bid.listing.is_active and bid.listing.end_time > now %}
+                                        {% if bid.amount >= bid.listing.current_highest_bid %}
+                                        <span style="color: green; font-weight: 500;">Leading</span>
+                                        {% else %}
+                                        <span style="color: red; font-weight: 500;">Outbid</span>
+                                        {% endif %}
                                     {% else %}
-                                    <span style="color: red; font-weight: 500;">Outbid</span>
+                                        {% if bid.amount >= bid.listing.current_highest_bid %}
+                                        <span style="color: #2e7d32; font-weight: 500;">Won</span>
+                                        {% else %}
+                                        <span style="color: #666; font-weight: 500;">Lost</span>
+                                        {% endif %}
                                     {% endif %}
                                 </td>
                             </tr>
@@ -488,14 +521,19 @@
                                 <td>₹{{ bid.amount }}</td>
                                 <td>{{ bid.timestamp|date:"M d, Y" }}</td>
                                 <td>
-                                    {% if bid.listing.is_active %}
-                                    {% if bid.amount >= bid.listing.current_highest_bid %}
-                                    <span style="color: green; font-weight: 500;">Leading</span>
+
+                                    {% if bid.listing.is_active and bid.listing.end_time > now %}
+                                        {% if bid.amount >= bid.listing.current_highest_bid %}
+                                        <span style="color: green; font-weight: 500;">Leading</span>
+                                        {% else %}
+                                        <span style="color: red; font-weight: 500;">Outbid</span>
+                                        {% endif %}
                                     {% else %}
-                                    <span style="color: red; font-weight: 500;">Outbid</span>
-                                    {% endif %}
-                                    {% else %}
-                                    Closed
+                                        {% if bid.amount >= bid.listing.current_highest_bid %}
+                                        <span style="color: #2e7d32; font-weight: 500;">Won</span>
+                                        {% else %}
+                                        <span style="color: #666; font-weight: 500;">Lost</span>
+                                        {% endif %}
                                     {% endif %}
                                 </td>
                             </tr>

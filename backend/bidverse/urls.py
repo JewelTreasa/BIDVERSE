@@ -14,11 +14,17 @@ urlpatterns = [
     path('', account_views.home, name='home'),
     path('marketplace/', account_views.marketplace, name='marketplace'),
     path('contact/', account_views.contact, name='contact'),
+    path('terms/', account_views.terms, name='terms'),
+    path('privacy-policy/', account_views.privacy_policy, name='privacy_policy'),
+    path('help/', account_views.help_center, name='help_center'),
     path('dashboard/', account_views.dashboard, name='dashboard'),
     path('auction/<int:listing_id>/', account_views.auction_detail, name='auction_detail'),
     path('auction/<int:listing_id>/bid/', account_views.place_bid, name='place_bid'),
     path('listing/<int:listing_id>/delete/', account_views.delete_listing, name='delete_listing'),
     path('listing/<int:listing_id>/notify/', account_views.toggle_notification, name='toggle_notification'),
+    path('notifications/', account_views.notifications, name='notifications'),
+    path('notifications/mark/<int:notif_id>/', account_views.mark_notification_read, name='mark_notification_read'),
+    path('admin/send-notification/', account_views.send_notification, name='send_notification'),
 
     # Web form views (outside of API namespace)
     path('login/', account_views.login_user, name='login'),

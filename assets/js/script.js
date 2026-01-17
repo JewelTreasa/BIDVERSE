@@ -90,127 +90,128 @@ timers.forEach(timer => {
 // Profile Dropdown Toggle
 window.toggleProfileDropdown = function () {
     const dropdown = document.getElementById('profileDropdown');
+    const notifDropdown = document.getElementById('notificationDropdown');
+    
+    // Close notification dropdown if open
+    if (notifDropdown && notifDropdown.classList.contains('show')) {
+        notifDropdown.classList.remove('show');
+    }
+    
     if (dropdown) {
         dropdown.classList.toggle('show');
     }
 };
 
-// Close dropdown when clicking outside
-window.addEventListener('click', function (e) {
-    const dropdown = document.getElementById('profileDropdown');
-    const btn = document.querySelector('.profile-icon-btn');
-
-    if (dropdown && dropdown.classList.contains('show')) {
-        if (!dropdown.contains(e.target) && (!btn || !btn.contains(e.target))) {
-            dropdown.classList.remove('show');
-        }
+// Notification Dropdown Toggle
+window.toggleNotificationDropdown = function() {
+    const dropdown = document.getElementById('notificationDropdown');
+    const profileDropdown = document.getElementById('profileDropdown');
+    
+    // Close profile dropdown if open
+    if (profileDropdown && profileDropdown.classList.contains('show')) {
+        profileDropdown.classList.remove('show');
     }
-});
-
-// Smooth Scrolling for Anchor Links
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-
-        const targetId = this.getAttribute('href');
-        if (targetId === '#') return;
-
-        const targetElement = document.querySelector(targetId);
-
-        if (targetElement) {
-            // Close mobile menu if open
-            if (navLinks.classList.contains('active')) {
-                mobileBtn.click();
-            }
-
-            window.scrollTo({
-                top: targetElement.offsetTop - 80, // Offset for sticky header
-                behavior: 'smooth'
-            });
+    
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+        if (dropdown.classList.contains('show')) {
+            loadNotifications();
         }
-    });
-});
-
-// Live Auction Status Manager
-function checkAuctionStatus() {
-    const cards = document.querySelectorAll('.auction-card');
-    const now = new Date();
-
-    cards.forEach(card => {
-        const startTimeStr = card.dataset.startTime;
-        const endTimeStr = card.dataset.endTime;
-        if (!startTimeStr) return;
-
-        const startTime = new Date(startTimeStr);
-        // Date comparison
-        const isLive = now >= startTime;
-
-        const liveBadge = card.querySelector('.badge.live');
-        const upcomingBadge = card.querySelector('.badge.upcoming');
-        const bidBtn = card.querySelector('.bid-btn');
-        const notifyBtn = card.querySelector('.notify-btn');
-        const bidLabel = card.querySelector('.bid-label');
-        const timeLabel = card.querySelector('.time-label');
-        const timeDisplay = card.querySelector('.auction-time');
-
-        if (isLive) {
-            // Switch to Live Mode
-            if (liveBadge) liveBadge.style.display = '';
-            if (upcomingBadge) upcomingBadge.style.display = 'none';
-            if (bidBtn) bidBtn.style.display = '';
-            if (notifyBtn) notifyBtn.style.display = 'none';
-
-            if (bidLabel) bidLabel.innerText = 'Current Bid';
-            if (timeLabel) timeLabel.innerText = 'Ends At';
-
-            if (timeDisplay && endTimeStr) {
-                const end = new Date(endTimeStr);
-                const h = String(end.getHours()).padStart(2, '0');
-                const m = String(end.getMinutes()).padStart(2, '0');
-                timeDisplay.innerText = `${h}:${m}`;
-            }
-        } else {
-            // Ensure Upcoming Mode
-            if (liveBadge) liveBadge.style.display = 'none';
-            if (upcomingBadge) upcomingBadge.style.display = '';
-            if (bidBtn) bidBtn.style.display = 'none';
-            if (notifyBtn) notifyBtn.style.display = '';
-
-            if (bidLabel) bidLabel.innerText = 'Base Price';
-            if (timeLabel) timeLabel.innerText = 'Starts At';
-
-            if (timeDisplay && startTimeStr) {
-                const start = new Date(startTimeStr);
-                const h = String(start.getHours()).padStart(2, '0');
-                const m = String(start.getMinutes()).padStart(2, '0');
-                timeDisplay.innerText = `${h}:${m}`;
-            }
-        }
-    });
-}
-
-// Run immediately and then every second
-checkAuctionStatus();
-setInterval(checkAuctionStatus, 1000);
-
-// Notify Me Function
-window.toggleNotify = function (btn, auctionId) {
-    if ('Notification' in window && Notification.permission !== 'granted') {
-        Notification.requestPermission();
-    }
-
-    // Toggle state
-    if (btn.classList.contains('active')) {
-        btn.classList.remove('active');
-        btn.innerHTML = '<i class=\'far fa-bell\'></i> Notify Me';
-        btn.style.background = '';
-        btn.style.color = '';
-    } else {
-        btn.classList.add('active');
-        btn.innerHTML = '<i class=\'fas fa-bell\'></i> Set';
-        btn.style.background = '#f39c12';
-        btn.style.color = 'white';
-        alert('You will be notified when this auction starts!');
     }
 };
+
+window.loadNotifications = function() {
+    const list = document.getElementById('notification-list');
+    if (!list) return;
+    
+    fetch('/notifications/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                list.innerHTML = `<div style="padding: 1rem; text-align: center; color: #dc2626;">${data.error}</div>`;
+                return;
+            }
+            
+            const badge = document.getElementById('notif-badge');
+            
+            if (data.length === 0) {
+                list.innerHTML = '<div style="padding: 1rem; text-align: center; color: #666;">No notifications</div>';
+                if(badge) badge.style.display = 'none';
+                return;
+            }
+            
+            let hasUnread = false;
+            let html = '';
+            data.forEach(notif => {
+                if (!notif.is_read) hasUnread = true;
+                const bg = notif.is_read ? 'white' : '#f0fdf4';
+                const time = new Date(notif.created_at).toLocaleString();
+                html += `
+                <div onclick="markRead(${notif.id}, this)" style="padding: 10px 15px; border-bottom: 1px solid #eee; background: ${bg}; cursor: pointer; transition: background 0.2s;">
+                    <p style="margin: 0; font-size: 0.9rem; color: #333; ${!notif.is_read ? 'font-weight: 600;' : ''}">${notif.message}</p>
+                    <span style="font-size: 0.75rem; color: #999;">${time}</span>
+                </div>
+                `;
+            });
+            list.innerHTML = html;
+            
+            if(badge) {
+                if (hasUnread) {
+                    badge.style.display = 'block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error loading notifications:', err);
+            list.innerHTML = '<div style="padding: 1rem; text-align: center; color: #dc2626;">Failed to load</div>';
+        });
+};
+
+window.markRead = function(id, element) {
+    fetch(`/notifications/mark/${id}/`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                element.style.background = 'white';
+                element.querySelector('p').style.fontWeight = 'normal';
+                
+                // Hide badge if no more unread (simplified check)
+                // Ideally strictly check count, but for now we can rely on next load or simple logic
+                // For better UX, we could decriment a counter, but re-fetching or hiding badge on next open is okay.
+            }
+        });
+};
+
+// Polling for notifications (simple badge check)
+setInterval(() => {
+    const badge = document.getElementById('notif-badge');
+    if (badge) {
+        // Optional: We could implement a lightweight "check count" endpoint to avoid full fetch
+        // For now, let's not spam valid requests excessively.
+        // Or we just re-use loadNotifications if we want live updates.
+        // loadNotifications(); // Uncomment if real-time polling is desired
+    }
+}, 60000);
+
+// Close dropdown when clicking outside
+window.addEventListener('click', function (e) {
+    const profileDropdown = document.getElementById('profileDropdown');
+    const notifDropdown = document.getElementById('notificationDropdown');
+    const profileBtn = document.querySelector('.profile-icon-btn[aria-label="Profile"]');
+    const notifBtn = document.querySelector('.profile-icon-btn[aria-label="Notifications"]');
+
+    if (profileDropdown && profileDropdown.classList.contains('show')) {
+        if (!profileDropdown.contains(e.target) && (!profileBtn || !profileBtn.contains(e.target))) {
+            profileDropdown.classList.remove('show');
+        }
+    }
+    
+    if (notifDropdown && notifDropdown.classList.contains('show')) {
+        if (!notifDropdown.contains(e.target) && (!notifBtn || !notifBtn.contains(e.target))) {
+            notifDropdown.classList.remove('show');
+        }
+    }
+});
 

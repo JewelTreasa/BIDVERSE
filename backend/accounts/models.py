@@ -89,8 +89,20 @@ class Listing(models.Model):
     @property
     def display_time(self):
         """Returns formatted local end_time if live, otherwise start_time."""
-        target_time = self.end_time if self.start_time <= timezone.now() else self.start_time
-        return timezone.localtime(target_time).strftime("%I:%M %p")
+        now = timezone.localtime(timezone.now())
+        if self.start_time <= now:
+             # Live: show end time
+             target_time = self.end_time
+             return timezone.localtime(target_time).strftime("%I:%M %p")
+        else:
+            # Upcoming
+            start_local = timezone.localtime(self.start_time)
+            if start_local.date() > now.date():
+                # Starts on a future date: show Date AND Time
+                return start_local.strftime("%b %d, %I:%M %p")
+            else:
+                 # Starts today: show Time
+                 return start_local.strftime("%I:%M %p")
 
     @property
     def display_image(self):
@@ -113,6 +125,16 @@ class Listing(models.Model):
             return '/assets/images/premium_wheat.png'
         elif 'wheat' in name:
             return '/assets/images/wheat.jpg'
+        elif 'apple' in name:
+            return '/assets/images/shimla_apples.png'
+        elif 'grapes' in name:
+            return '/assets/images/green_grapes.png'
+        elif 'pulse' in name:
+            return '/assets/images/pulses.png'
+        elif 'spice' in name:
+            return '/assets/images/spices.jpg'
+        elif 'tea' in name:
+            return '/assets/images/tea.jpg'
         return '/assets/images/placeholder-agri.jpg'
 
     @property
@@ -144,3 +166,15 @@ class NotificationSubscription(models.Model):
 
     def __str__(self):
         return f"{self.user.email} -> {self.listing.commodity}"
+
+
+class Notification(models.Model):
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    def __str__(self):
+        status = 'Read' if self.is_read else 'Unread'
+        return f"{self.receiver.email} - {status}: {self.message[:30]}..."
+

@@ -11,7 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
     {% load static %}
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=1.8">
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -42,22 +42,45 @@
                 <!-- prettier-ignore -->
                 {% if user.is_authenticated %}
                 <span class="user-name-nav">Hi, {{ user.first_name }}</span>
-                <div class="profile-dropdown">
-                    <button class="profile-icon-btn" onclick="toggleProfileDropdown()" aria-label="Profile">
-                        <i class="fas fa-user-circle"></i>
-                    </button>
-                    <div class="dropdown-menu" id="profileDropdown">
-                        <div class="dropdown-header">
-                            <span class="user-name">{{ user.first_name }} {{ user.last_name }}</span>
-                            <span class="user-email">{{ user.email }}</span>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <div class="profile-dropdown">
+                        <button class="profile-icon-btn" onclick="toggleProfileDropdown()" aria-label="Profile">
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+                        <div class="dropdown-menu" id="profileDropdown">
+                            <div class="dropdown-header">
+                                <span class="user-name">{{ user.first_name }} {{ user.last_name }}</span>
+                                <span class="user-email">{{ user.email }}</span>
+                            </div>
+                            <a href="{% url 'dashboard' %}" class="dropdown-item">
+                                <i class="fas fa-columns"></i> Dashboard
+                            </a>
+                            <a href="{% url 'logout' %}" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i> Log Out
+                            </a>
                         </div>
-                        <a href="{% url 'dashboard' %}" class="dropdown-item">
-                            <i class="fas fa-columns"></i> Dashboard
-                        </a>
-                        <a href="{% url 'logout' %}" class="dropdown-item">
-                            <i class="fas fa-sign-out-alt"></i> Log Out
-                        </a>
                     </div>
+                    
+                    {% if user.user_type == 'BUYER' %}
+                    <!-- Notification Dropdown -->
+                    <div class="profile-dropdown">
+                        <button class="profile-icon-btn" onclick="toggleNotificationDropdown()" aria-label="Notifications" style="position: relative;">
+                            <i class="fas fa-bell"></i>
+                            <span id="notif-badge" style="position: absolute; top: 0; right: 0; background: #dc2626; color: white; border-radius: 50%; width: 8px; height: 8px; display: none;"></span>
+                        </button>
+                        <div class="dropdown-menu" id="notificationDropdown" style="width: 300px; right: 0;">
+                            <div class="dropdown-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="user-name-drop">Notifications</span>
+                                <small id="mark-all-read" style="cursor: pointer; color: #2e7d32; display: none;">Mark all read</small>
+                            </div>
+                            <div id="notification-list" style="max-height: 300px; overflow-y: auto;">
+                                <div style="padding: 1rem; text-align: center; color: #666;">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
                 <!-- prettier-ignore -->
                 {% else %}
@@ -70,20 +93,20 @@
     </nav>
 
     <section class="hero-section">
-        <div class="hero-background">
-            <img src="{% static 'images/hero.jpg' %}" alt="Agricultural Farmland">
-            <div class="hero-overlay"></div>
-        </div>
-
         <div class="container hero-container">
-            <div class="hero-content">
-                <div class="hero-badge">Transparent Marketplace</div>
-                <h1>Sell & Buy Agricultural Commodities Through <span class="highlight">Smart Auctions</span></h1>
-                <p>The fairest, most transparent marketplace for farmers, traders, and buyers. Connect directly, bid in
-                    real-time, and get the best value for your produce.</p>
-                <div class="hero-buttons">
-                    <a href="{% url 'register' %}" class="btn btn-primary">Start Selling</a>
-                    <a href="{% url 'marketplace' %}" class="btn btn-secondary">Browse Auctions</a>
+            <div class="hero-columns">
+                <div class="hero-content">
+                    <div class="hero-badge">Transparent Marketplace</div>
+                    <h1>Sell & Buy Agricultural Commodities Through <span class="highlight">Smart Auctions</span></h1>
+                    <p>The fairest, most transparent marketplace for farmers, traders, and buyers. Connect directly, bid in
+                        real-time, and get the best value for your produce.</p>
+                    <div class="hero-buttons">
+                        <a href="{% url 'register' %}" class="btn btn-primary">Start Selling <i class="fas fa-arrow-right" style="margin-left: 8px;"></i></a>
+                        <a href="{% url 'marketplace' %}" class="btn btn-secondary">Browse Auctions</a>
+                    </div>
+                </div>
+                <div class="hero-image-column">
+                    <img src="{% static 'images/hero_2d.png' %}" alt="BidVerse Agricultural Auction Illustration">
                 </div>
             </div>
         </div>
@@ -154,20 +177,37 @@
                             </div>
                         </div>
                         <div class="card-actions">
+                            {% if user.is_authenticated and user.user_type == 'FARMER' %}
+                            <a href="{% url 'auction_detail' auction.id %}"
+                                class="btn btn-outline btn-block {% if auction.start_time > now %}hidden{% endif %}"
+                                style="display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-eye" style="margin-right: 5px;"></i> View Details
+                            </a>
+                            {% else %}
                             <a href="{% url 'auction_detail' auction.id %}"
                                 class="btn btn-primary btn-block bid-btn {% if auction.start_time > now %}hidden{% endif %}">Place
                                 Bid</a>
-                            <button
-                                class="btn btn-outline btn-block notify-btn {% if auction.start_time <= now %}hidden{% endif %}"
-                                onclick="toggleNotify(this)" data-listing-id="{{ auction.id }}"
-                                data-subscribed="{{ auction.is_subscribed|yesno:'true,false' }}">
-                                <!-- prettier-ignore -->
-                                {% if auction.is_subscribed %}
-                                <i class="fas fa-bell"></i> Subscribed
-                                {% else %}
-                                <i class="far fa-bell"></i> Notify Me
+                            {% endif %}
+                            
+                            <!-- Upcoming Actions: Side by Side -->
+                            <div class="upcoming-actions {% if auction.start_time <= now %}hidden{% endif %}" style="display: flex; gap: 10px; width: 100%;">
+                                {% if not user.is_authenticated or user.user_type == 'BUYER' %}
+                                    {% if not auction.is_subscribed %}
+                                    <button
+                                        class="btn btn-outline notify-btn"
+                                        onclick="toggleNotify(this)" data-listing-id="{{ auction.id }}"
+                                        data-subscribed="false"
+                                        style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 5px; font-size: 0.9rem;">
+                                        <i class="far fa-bell" style="margin-right: 5px;"></i> Notify Me
+                                    </button>
+                                    {% endif %}
                                 {% endif %}
-                            </button>
+                                <a href="{% url 'auction_detail' auction.id %}"
+                                    class="btn btn-outline"
+                                    style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 5px; font-size: 0.9rem;">
+                                    <i class="fas fa-eye" style="margin-right: 5px;"></i> View Details
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -200,11 +240,8 @@
                 .then(data => {
                     if (!data) return;
                     if (data.subscribed) {
-                        btn.innerHTML = '<i class="fas fa-bell"></i> Subscribed';
-                        btn.classList.add('subscribed');
-                    } else {
-                        btn.innerHTML = '<i class="far fa-bell"></i> Notify Me';
-                        btn.classList.remove('subscribed');
+                        // Button goes and only show the view details
+                        btn.style.display = 'none';
                     }
                 })
                 .catch(error => {
@@ -289,7 +326,13 @@
                 </div>
                 <div class="commodity-item item-4">
                     <div class="overlay">
-                        <h3>Cash Crops</h3>
+                        <h3>Fruits & Vegetables</h3>
+                        <p>Tomato, Potato, Onion</p>
+                    </div>
+                </div>
+                <div class="commodity-item item-5">
+                    <div class="overlay">
+                        <h3>Plantation</h3>
                         <p>Rubber, Cotton, Tea</p>
                     </div>
                 </div>
@@ -362,10 +405,10 @@
                 <div class="footer-col">
                     <h4>Support</h4>
                     <ul>
-                        <li><a href="#">Help Center</a></li>
-                        <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="/contact/">Contact Us</a></li>
+                        <li><a href="{% url 'help_center' %}">Help Center</a></li>
+                        <li><a href="{% url 'terms' %}">Terms of Service</a></li>
+                        <li><a href="{% url 'privacy_policy' %}">Privacy Policy</a></li>
+                        <li><a href="{% url 'contact' %}">Contact Us</a></li>
                     </ul>
                 </div>
                 <div class="footer-col">

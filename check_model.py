@@ -7,6 +7,11 @@ sys.path.append('d:\\BIDVERSE OUT\\backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bidverse.settings')
 django.setup()
 
+try:
+    from accounts.models import Notification
+    print("Notification model imported successfully!")
+except Exception as e:
+    print(f"Error importing Notification: {e}")
 from accounts.models import Listing
 from django.utils import timezone
 

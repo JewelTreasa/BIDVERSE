@@ -434,21 +434,45 @@
             </div>
             <div class="nav-buttons">
                 <span class="user-name-nav">Hi, {{ user.first_name }}</span>
-                <!-- Profile Dropdown -->
-                <div class="profile-dropdown">
-                    <button class="profile-icon-btn" onclick="toggleProfileDropdown()" aria-label="Profile">
-                        <i class="fas fa-user-circle"></i>
-                    </button>
-                    <div class="dropdown-menu" id="profileDropdown">
-                        <div class="dropdown-header">
-                            <span class="user-name-drop">{{ user.first_name }} {{ user.last_name }}</span>
-                            <span class="user-email-drop">{{ user.email }}</span>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <div class="profile-dropdown">
+                        <button class="profile-icon-btn" onclick="toggleProfileDropdown()" aria-label="Profile">
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+                        <div class="dropdown-menu" id="profileDropdown">
+                            <div class="dropdown-header">
+                                <span class="user-name-drop">{{ user.first_name }} {{ user.last_name }}</span>
+                                <span class="user-email-drop">{{ user.email }}</span>
+                            </div>
+                            <a href="{% url 'dashboard' %}" class="dropdown-item">
+                                <i class="fas fa-columns"></i> Dashboard
+                            </a>
+                            <a href="{% url 'logout' %}" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i> Log Out
+                            </a>
                         </div>
-                        <a href="{% url 'dashboard' %}" class="dropdown-item"><i class="fas fa-columns"></i>
-                            Dashboard</a>
-                        <a href="{% url 'logout' %}" class="dropdown-item"><i class="fas fa-sign-out-alt"></i> Log
-                            Out</a>
                     </div>
+                    
+                    {% if user.user_type == 'BUYER' %}
+                    <!-- Notification Dropdown -->
+                    <div class="profile-dropdown">
+                        <button class="profile-icon-btn" onclick="toggleNotificationDropdown()" aria-label="Notifications" style="position: relative;">
+                            <i class="fas fa-bell"></i>
+                            <span id="notif-badge" style="position: absolute; top: 0; right: 0; background: #dc2626; color: white; border-radius: 50%; width: 8px; height: 8px; display: none;"></span>
+                        </button>
+                        <div class="dropdown-menu" id="notificationDropdown" style="width: 300px; right: 0;">
+                            <div class="dropdown-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="user-name-drop">Notifications</span>
+                                <small id="mark-all-read" style="cursor: pointer; color: #2e7d32; display: none;">Mark all read</small>
+                            </div>
+                            <div id="notification-list" style="max-height: 300px; overflow-y: auto;">
+                                <div style="padding: 1rem; text-align: center; color: #666;">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             <button class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
@@ -613,17 +637,71 @@
 
                 {% elif section == 'auctions' %}
                 <div class="content-card">
-                    <div class="card-header">
-                        <h2>Auction Monitoring</h2>
-                        <span class="badge"
-                            style="background: #fee2e2; color: #dc2626; padding: 4px 12px; border-radius: 20px; font-size: 14px;">Live
-                            Controls</span>
+                    <div class="card-header" style="flex-direction: column; gap: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h2>Auction Monitoring</h2>
+                            <span class="badge"
+                                style="background: #e0f2f1; color: #166534; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;">
+                                <i class="fas fa-sync-alt" style="margin-right: 6px;"></i>Real-time
+                            </span>
+                        </div>
+                        
+                        <form method="GET" action="." style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr auto; gap: 12px; align-items: center;">
+                            <input type="hidden" name="section" value="auctions">
+                            
+                            <!-- Search -->
+                            <div style="position: relative;">
+                                <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
+                                <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Search auctions..." 
+                                    style="width: 100%; padding: 10px 14px 10px 40px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: #f9fafb; transition: all 0.2s;"
+                                    onfocus="this.style.background='white'; this.style.borderColor='#2e7d32';"
+                                    onblur="this.style.background='#f9fafb'; this.style.borderColor='#e5e7eb';">
+                            </div>
+                            
+                            <!-- Filter Status -->
+                            <div style="position: relative;">
+                                <i class="fas fa-filter" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #6b7280; z-index: 1; pointer-events: none;"></i>
+                                <select name="status" onchange="this.form.submit()" 
+                                    style="width: 100%; padding: 10px 14px 10px 36px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white; appearance: none; cursor: pointer;">
+                                    <option value="">All Statuses</option>
+                                    <option value="live" {% if request.GET.status == 'live' %}selected{% endif %}>Live Auctions</option>
+                                    <option value="upcoming" {% if request.GET.status == 'upcoming' %}selected{% endif %}>Upcoming</option>
+                                    <option value="closed" {% if request.GET.status == 'closed' %}selected{% endif %}>Closed</option>
+                                </select>
+                                <i class="fas fa-chevron-down" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; font-size: 12px;"></i>
+                            </div>
+                            
+                            <!-- Sort -->
+                            <div style="position: relative;">
+                                <i class="fas fa-sort-amount-down" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #6b7280; z-index: 1; pointer-events: none;"></i>
+                                <select name="sort" onchange="this.form.submit()"
+                                    style="width: 100%; padding: 10px 14px 10px 36px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white; appearance: none; cursor: pointer;">
+                                    <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>Newest</option>
+                                    <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>Oldest</option>
+                                    <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price: High-Low</option>
+                                    <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price: Low-High</option>
+                                    <option value="date_asc" {% if request.GET.sort == 'date_asc' %}selected{% endif %}>Date: Soonest</option>
+                                    <option value="date_desc" {% if request.GET.sort == 'date_desc' %}selected{% endif %}>Date: Latest</option>
+                                </select>
+                                <i class="fas fa-chevron-down" style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; font-size: 12px;"></i>
+                            </div>
+                            
+                            <!-- Clear Button -->
+                            {% if request.GET.search or request.GET.status or request.GET.sort %}
+                            <a href="?section=auctions" class="btn" style="padding: 10px; color: #ef4444; border: 1px solid #fee2e2; background: #fef2f2; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Clear Filters">
+                                <i class="fas fa-times"></i>
+                            </a>
+                            {% else %}
+                            <div></div>
+                            {% endif %}
+                        </form>
                     </div>
                     <table class="action-table">
                         <thead>
                             <tr>
                                 <th>Listing</th>
                                 <th>Seller</th>
+                                <th>Date</th>
                                 <th>Highest Bid</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -634,12 +712,16 @@
                             <tr>
                                 <td>{{ listing.commodity }}</td>
                                 <td>{{ listing.seller.email }}</td>
+                                <td>{{ listing.end_time|date:"M d, Y" }}</td>
                                 <td>₹{{ listing.current_highest_bid|default:listing.base_price }}</td>
                                 <td>
-                                    {% if listing.is_active %}
-                                    <span style="color: green;">Active</span>
-                                    {% else %}
+                                    {% now "Y-m-d H:i:s" as current_time %}
+                                    {% if listing.end_time|date:"Y-m-d H:i:s" < current_time %}
                                     <span style="color: gray;">Closed</span>
+                                    {% elif listing.start_time|date:"Y-m-d H:i:s" <= current_time %}
+                                    <span style="color: green;">Live</span>
+                                    {% else %}
+                                    <span style="color: #f59e0b;">Upcoming</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -654,7 +736,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5" style="text-align: center; padding: 20px;">No auctions found in system.
+                                <td colspan="6" style="text-align: center; padding: 20px;">No auctions found in system.
                                 </td>
                             </tr>
                             {% endfor %}
@@ -718,17 +800,11 @@
                             </div>
                         </div>
                         <hr style="border: 0; border-top: 1px solid #eee;">
-                        <div>
-                            <h4 style="margin-bottom: 12px; color: #333;">Platform Notifications</h4>
-                            <div style="display: flex; gap: 20px; align-items: center;">
-                                <input type="checkbox" id="email_notif" checked>
-                                <label for="email_notif">Receive email alerts for new registrations</label>
-                            </div>
-                        </div>
                         <button type="button" class="btn btn-primary" style="background: #dc2626; padding: 14px;">Update
                             Admin Profile</button>
                     </form>
                 </div>
+
 
                 {% else %}
                 <div class="content-card" style="text-align: center; padding: 60px;">

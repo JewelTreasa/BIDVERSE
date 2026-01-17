@@ -22,7 +22,23 @@
 <div class="detail-actions">
 <div style="background: #ffffff; border: 2px solid #f1f5f9; border-radius: 25px; padding: 35px; position: sticky; top: 120px;">
 <h1 style="font-family: Playfair Display, serif; font-size: 36px; color: var(--text-dark); margin-bottom: 10px;">{{ listing.commodity }}</h1>
-<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 25px;"><i class="fas fa-clock" style="color: var(--primary-green);"></i><span style="color: #64748b; font-weight: 500;">{{ listing.time_label }}: <span style="color: var(--text-dark);">{{ listing.display_time }}</span></span></div>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 25px;">
+                                <i class="fas fa-clock" style="color: var(--primary-green);"></i>
+                                <span style="color: #64748b; font-weight: 500;">{{ listing.time_label }}: 
+                                    <span style="color: var(--text-dark);">
+                                        {% now "Y-m-d" as current_date_str %}
+                                        {% if listing.time_label == "Starts At" %}
+                                            {% if listing.start_time|date:"Y-m-d" == current_date_str %}
+                                                Today, {{ listing.start_time|date:"h:i A" }}
+                                            {% else %}
+                                                {{ listing.start_time|date:"M d, h:i A" }}
+                                            {% endif %}
+                                        {% else %}
+                                            {{ listing.display_time }}
+                                        {% endif %}
+                                    </span>
+                                </span>
+                            </div>
 <div class="detail-bid-box"><span class="label-v2" style="display: block; margin-bottom: 8px;">{{ listing.display_label }}</span><div class="bid-price-v2" style="font-size: 48px; letter-spacing: -1px;">{{ listing.display_price }}</div></div>
 {% if messages %}{% for message in messages %}<div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}" style="margin-bottom: 20px; border-radius: 12px;">{{ message }}</div>{% endfor %}{% endif %}
 {% if user.is_authenticated and user.user_type == 'BUYER' %}

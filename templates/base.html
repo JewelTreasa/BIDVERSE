@@ -44,23 +44,49 @@
             <div class="nav-buttons">
                 {% if user.is_authenticated %}
                 <span class="user-name-nav">Hi, {{ user.first_name }}</span>
-                <div class="profile-dropdown">
-                    <button class="profile-icon-btn" onclick="toggleProfileDropdown()" aria-label="Profile">
-                        <i class="fas fa-user-circle"></i>
-                    </button>
-                    <div class="dropdown-menu" id="profileDropdown">
-                        <div class="dropdown-header">
-                            <span class="user-name">{{ user.first_name }} {{ user.last_name }}</span>
-                            <span class="user-email">{{ user.email }}</span>
+                
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <!-- Profile Dropdown -->
+                    <div class="profile-dropdown">
+                        <button class="profile-icon-btn" onclick="toggleProfileDropdown()" aria-label="Profile">
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+                        <div class="dropdown-menu" id="profileDropdown">
+                            <div class="dropdown-header">
+                                <span class="user-name">{{ user.first_name }} {{ user.last_name }}</span>
+                                <span class="user-email">{{ user.email }}</span>
+                            </div>
+                            <a href="{% url 'dashboard' %}" class="dropdown-item">
+                                <i class="fas fa-columns"></i> Dashboard
+                            </a>
+                            <a href="{% url 'logout' %}" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i> Log Out
+                            </a>
                         </div>
-                        <a href="{% url 'dashboard' %}" class="dropdown-item">
-                            <i class="fas fa-columns"></i> Dashboard
-                        </a>
-                        <a href="{% url 'logout' %}" class="dropdown-item">
-                            <i class="fas fa-sign-out-alt"></i> Log Out
-                        </a>
                     </div>
+
+                    {% if user.user_type == 'BUYER' %}
+                    <!-- Notification Dropdown -->
+                    <div class="profile-dropdown">
+                        <button class="profile-icon-btn" onclick="toggleNotificationDropdown()" aria-label="Notifications" style="position: relative;">
+                            <i class="fas fa-bell"></i>
+                            <span id="notif-badge" style="position: absolute; top: 0; right: 0; background: #dc2626; color: white; border-radius: 50%; width: 8px; height: 8px; display: none;"></span>
+                        </button>
+                        <div class="dropdown-menu" id="notificationDropdown" style="width: 300px; right: 0;">
+                            <div class="dropdown-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="user-name-drop">Notifications</span>
+                                <small id="mark-all-read" style="cursor: pointer; color: #2e7d32; display: none;">Mark all read</small>
+                            </div>
+                            <div id="notification-list" style="max-height: 300px; overflow-y: auto;">
+                                <div style="padding: 1rem; text-align: center; color: #666;">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
+
                 {% else %}
                 <a href="{% url 'login' %}" class="btn btn-outline">Log In</a>
                 <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
@@ -95,10 +121,10 @@
                 <div class="footer-col">
                     <h4>Support</h4>
                     <ul>
-                        <li><a href="#">Help Center</a></li>
-                        <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Contact Us</a></li>
+                        <li><a href="{% url 'help_center' %}">Help Center</a></li>
+                        <li><a href="{% url 'terms' %}">Terms of Service</a></li>
+                        <li><a href="{% url 'privacy_policy' %}">Privacy Policy</a></li>
+                        <li><a href="{% url 'contact' %}">Contact Us</a></li>
                     </ul>
                 </div>
                 <div class="footer-col">
@@ -121,27 +147,8 @@
     <script>
         // Make CSRF token available globally for AJAX requests
         window.CSRF_TOKEN = '{{ csrf_token }}';
-
-        // Profile Dropdown Functionality
-        function toggleProfileDropdown() {
-            const dropdown = document.getElementById('profileDropdown');
-            if (dropdown) {
-                dropdown.classList.toggle('show');
-            }
-        }
-
-        window.onclick = function (event) {
-            if (!event.target.closest('.profile-dropdown')) {
-                var dropdowns = document.getElementsByClassName("dropdown-menu");
-                for (var i = 0; i < dropdowns.length; i++) {
-                    var openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('show')) {
-                        openDropdown.classList.remove('show');
-                    }
-                }
-            }
-        }
     </script>
+    <script src="/assets/js/script.js"></script>
 </body>
 
 </html>

@@ -46,6 +46,7 @@ class Listing(models.Model):
     
     # New field to track if notification has been sent
     notification_sent = models.BooleanField(default=False)
+    winner_notified = models.BooleanField(default=False)
 
     @property
     def start_time(self):
@@ -77,19 +78,46 @@ class Listing(models.Model):
         return f"{int(price)}"
 
     @property
+    def is_break_time(self):
+        """Returns True if this is a whole-day auction and currently in break time (1:30 PM - 2:15 PM)."""
+        if not (self.morning_session and self.evening_session):
+            return False
+            
+        now = timezone.localtime(timezone.now())
+        current_time = now.time()
+        
+        # Break time constants (matching views.py)
+        BREAK_START = time(13, 30)
+        BREAK_END = time(14, 15)
+        
+        return BREAK_START <= current_time < BREAK_END
+
+    @property
     def display_label(self):
-        """Returns 'Current Bid' if live, otherwise 'Base Price'."""
+        """Returns 'Current Bid' if live, 'Break Time' if on break, otherwise 'Base Price'."""
+        if self.is_break_time:
+            return "Break Time"
         return "Current Bid" if self.start_time <= timezone.now() else "Base Price"
 
     @property
     def time_label(self):
-        """Returns 'Ends At' if live, otherwise 'Starts At'."""
+        """Returns 'Ends At' if live, 'Resumes At' if on break, otherwise 'Starts At'."""
+        if self.is_break_time:
+            return "Resumes At"
         return "Ends At" if self.start_time <= timezone.now() else "Starts At"
 
     @property
     def display_time(self):
-        """Returns formatted local end_time if live, otherwise start_time."""
+        """Returns formatted local end_time if live, resume time if break, otherwise start_time."""
         now = timezone.localtime(timezone.now())
+        
+        if self.is_break_time:
+            # Return evening start time (2:15 PM)
+            EVENING_START = time(14, 15)
+            # Find the next occurrence of 2:15 PM (which is today)
+            resume_time = datetime.combine(now.date(), EVENING_START)
+            return timezone.localtime(timezone.make_aware(resume_time, timezone.get_current_timezone())).strftime("%I:%M %p")
+            
         if self.start_time <= now:
              # Live: show end time
              target_time = self.end_time
@@ -169,8 +197,14 @@ class NotificationSubscription(models.Model):
 
 
 class Notification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('GENERAL', 'General Notification'),
+        ('WIN', 'Auction Win Celebration'),
+    )
+
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     message = models.TextField()
+    notification_type = models.CharField(max_length=10, choices=NOTIFICATION_TYPES, default='GENERAL')
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 

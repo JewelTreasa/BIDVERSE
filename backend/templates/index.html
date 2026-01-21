@@ -98,19 +98,54 @@
         color: #1a2e05 !important;
     }
 
-    /* Redesigned Hero Section */
+    /* Redesigned Hero Section with Slider */
     .hero-section {
         height: 100vh;
         min-height: 700px;
         padding: 0;
-        background-image: url('/assets/images/hero_spices_v2.jpg?v=1000');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
         display: flex;
         align-items: center;
         position: relative;
+        overflow: hidden;
     }
+
+    .hero-slider {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+    }
+
+    .hero-slide {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        opacity: 0;
+        transition: opacity 1.5s ease-in-out;
+        filter: contrast(110%) brightness(95%) saturate(110%);
+    }
+
+    .hero-slide.active {
+        opacity: 1;
+    }
+
+    .hero-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.05));
+        z-index: 1;
+    }
+
 
     .hero-container {
         position: relative;
@@ -192,8 +227,19 @@
 {% endblock %}
 
 {% block content %}
-    <!-- Hero Section -->
+    <!-- Hero Section with Slider -->
     <section class="hero-section">
+        <div class="hero-slider">
+            <div class="hero-slide active" style="background-image: url('/assets/images/hero_spices_dark_spoons.jpg');">
+                <div class="hero-overlay"></div>
+            </div>
+            <div class="hero-slide" style="background-image: url('/assets/images/hero_rice_new.jpg');">
+                <div class="hero-overlay"></div>
+            </div>
+            <div class="hero-slide" style="background-image: url('/assets/images/hero_maize_new.jpg');">
+                <div class="hero-overlay"></div>
+            </div>
+        </div>
         <div class="hero-container">
             <div class="hero-content">
                 <h1>Shaping the future of the <span class="highlight">fresh produce</span> industry</h1>
@@ -418,28 +464,6 @@
 
 
 
-    <!-- Chatbot Container -->
-    <div id="chatbotFab" class="chatbot-fab {% if not user.is_authenticated %}role-support{% elif user.user_type == 'BUYER' %}role-buyer{% elif user.user_type == 'FARMER' %}role-seller{% elif user.is_superuser %}role-admin{% endif %}">
-        <i class="fas fa-comment-dots"></i>
-    </div>
-
-    <div id="chatbotWindow" class="chatbot-window {% if not user.is_authenticated %}role-support{% elif user.user_type == 'BUYER' %}role-buyer{% elif user.user_type == 'FARMER' %}role-seller{% elif user.is_superuser %}role-admin{% endif %}">
-        <div class="chat-header">
-            <div>
-                <h3 id="botName">{% if not user.is_authenticated %}Support Bot{% elif user.user_type == 'BUYER' %}Bid Bot{% elif user.user_type == 'FARMER' %}Crop Bot{% else %}Shield Bot{% endif %}</h3>
-                <span class="role-label" id="botRole">{% if not user.is_authenticated %}Platform Guide{% elif user.user_type == 'BUYER' %}Bidding Assistant{% elif user.user_type == 'FARMER' %}Listing Expert{% else %}System Monitor{% endif %}</span>
-            </div>
-            <i class="fas fa-times" style="cursor: pointer;" onclick="document.getElementById('chatbotWindow').style.display='none'"></i>
-        </div>
-        <div id="chatMessages" class="chat-messages"></div>
-        <div id="chatTyping" class="typing" style="padding: 0 20px;">Assistant is typing...</div>
-        <div class="chat-input-area">
-            <input type="text" id="chatInput" class="chat-input" placeholder="How can I help you?">
-            <button id="chatSend" class="chat-send">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
-    </div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -448,12 +472,33 @@
         // Navbar scroll effect
         window.addEventListener('scroll', function() {
             const navbar = document.querySelector('.navbar');
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
+            if (navbar) {
+                if (window.scrollY > 50) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
             }
         });
+
+        // Hero Slider Logic
+        function initHeroSlider() {
+            const slides = document.querySelectorAll('.hero-slide');
+            if (slides.length <= 1) return;
+
+            let currentSlide = 0;
+            const slideInterval = 5000; // 5 seconds
+
+            function nextSlide() {
+                slides[currentSlide].classList.remove('active');
+                currentSlide = (currentSlide + 1) % slides.length;
+                slides[currentSlide].classList.add('active');
+            }
+
+            setInterval(nextSlide, slideInterval);
+        }
+
+        document.addEventListener('DOMContentLoaded', initHeroSlider);
 
         function toggleNotify(btn) {
             const listingId = btn.dataset.listingId;
@@ -499,5 +544,4 @@
             return cookieValue;
         }
     </script>
-    <script src="/assets/js/chatbot.js?v=2"></script>
 {% endblock %}

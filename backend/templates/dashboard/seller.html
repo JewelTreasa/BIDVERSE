@@ -971,27 +971,7 @@
         });
     </script>
     <!-- Chatbot Container -->
-    <div id="chatbotFab" class="chatbot-fab role-seller">
-        <i class="fas fa-comment-dots"></i>
-    </div>
-
-    <div id="chatbotWindow" class="chatbot-window role-seller">
-        <div class="chat-header">
-            <div>
-                <h3 id="botName">Crop Bot</h3>
-                <span class="role-label" id="botRole">Listing Expert</span>
-            </div>
-            <i class="fas fa-times" style="cursor: pointer;" onclick="document.getElementById('chatbotWindow').style.display='none'"></i>
-        </div>
-        <div id="chatMessages" class="chat-messages"></div>
-        <div id="chatTyping" class="typing" style="padding: 0 20px;">Crop Bot is typing...</div>
-        <div class="chat-input-area">
-            <input type="text" id="chatInput" class="chat-input" placeholder="Ask me about listings...">
-            <button id="chatSend" class="chat-send">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
-    </div>
+    {% include 'includes/chatbot.html' %}
 
     <script src="/assets/js/chatbot.js?v=2"></script>
 </body>

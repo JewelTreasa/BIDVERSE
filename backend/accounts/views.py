@@ -23,136 +23,15 @@ from django.contrib.auth import get_user_model
 from .models import Listing, Bid, NotificationSubscription, Notification
 User = get_user_model()
 
-# Session timing constants
-MORNING_START = time(9, 30)  # 9:30 AM
-MORNING_END = time(13, 30)    # 1:30 PM
-EVENING_START = time(14, 15) # 2:15 PM
-EVENING_END = time(18, 15)   # 6:15 PM
-BREAK_START = time(13, 30)  # 1:30 PM
-BREAK_END = time(14, 15)     # 2:15 PM
+from .utils import (
+    get_current_session_info, 
+    auto_end_expired_auctions, 
+    send_auction_notifications,
+    MORNING_START, MORNING_END, EVENING_START, EVENING_END, BREAK_START, BREAK_END
+)
 
-def get_current_session_info():
-    """Returns current session status: 'morning', 'evening', 'break', or 'closed'"""
-    # Use local time for session logic (wall clock time)
-    now = timezone.localtime(timezone.now())
-    current_time = now.time()
-    current_date = now.date()
-    
-    if MORNING_START <= current_time < MORNING_END:
-        return {
-            'session': 'morning',
-            'is_active': True,
-            'end_time': datetime.combine(current_date, MORNING_END),
-            'is_break': False
-        }
-    elif BREAK_START <= current_time < BREAK_END:
-        return {
-            'session': 'break',
-            'is_active': False,
-            'next_session_start': datetime.combine(current_date, EVENING_START),
-            'is_break': True
-        }
-    elif EVENING_START <= current_time < EVENING_END:
-        return {
-            'session': 'evening',
-            'is_active': True,
-            'end_time': datetime.combine(current_date, EVENING_END),
-            'is_break': False
-        }
-    else:
-        # Before morning or after evening
-        if current_time < MORNING_START:
-            return {
-                'session': 'closed',
-                'is_active': False,
-                'next_session_start': datetime.combine(current_date, MORNING_START),
-                'is_break': False
-            }
-        else:
-            # After evening session, next morning
-            next_date = current_date + timedelta(days=1)
-            return {
-                'session': 'closed',
-                'is_active': False,
-                'next_session_start': datetime.combine(next_date, MORNING_START),
-                'is_break': False
-            }
-
-def calculate_listing_end_time(selected_date, morning_session, evening_session):
-    """Calculate end_time based on selected sessions"""
-    if morning_session and evening_session:
-        # Both sessions selected - ends at evening end time
-        return datetime.combine(selected_date, EVENING_END)
-    elif morning_session:
-        # Only morning - ends at morning end time
-        return datetime.combine(selected_date, MORNING_END)
-    elif evening_session:
-        # Only evening - ends at evening end time
-        return datetime.combine(selected_date, EVENING_END)
-    else:
-        # Default to evening if nothing selected (shouldn't happen with validation)
-        return datetime.combine(selected_date, EVENING_END)
-
-def send_auction_notifications():
-    """Check for auctions starting now and send emails to subscribed users"""
-    now = timezone.localtime(timezone.now())
-    # Check for auctions that have started in the last few minutes but notification not sent
-    # We'll consider 'started' as start_time <= now
-    
-    # This is a bit complex because start_time is a property, not a field.
-    # We can fetch active listings for today and filter in python, or optimize query.
-    # For now, let's fetch active listings for today where notification_sent=False
-    
-    today = now.date()
-    listings = Listing.objects.filter(
-        is_active=True,
-        end_time__date=today,
-        notification_sent=False
-    )
-    
-    # We need to send notifications if start_time <= now
-    for listing in listings:
-        if listing.start_time <= now:
-            # Get subscribers
-            subscriptions = NotificationSubscription.objects.filter(listing=listing)
-            if subscriptions.exists():
-                recipient_list = [sub.user.email for sub in subscriptions]
-                
-                subject = f"Auction Started: {listing.commodity}"
-                message = f"""
-                The auction for {listing.commodity} has started!
-                
-                Base Price: ₹{listing.base_price}
-                Quantity: {listing.quantity} {listing.unit}
-                
-                Place your bid now: http://localhost:8000/auction/{listing.id}/
-                """
-                
-                try:
-                    send_mail(
-                        subject,
-                        message,
-                        settings.EMAIL_HOST_USER,
-                        recipient_list,
-                        fail_silently=True
-                    )
-                    print(f"Sent notifications for listing {listing.id} to {len(recipient_list)} users.")
-                except Exception as e:
-                    print(f"Error sending notifications: {e}")
-            
-            # Mark as sent regardless to avoid loops
-            listing.notification_sent = True
-            listing.save()
-
-def auto_end_expired_auctions():
-    """Automatically deactivate auctions that have passed their end time"""
-    # Also trigger notifications
-    send_auction_notifications()
-
-    now = timezone.localtime(timezone.now())
-    
-    # Close any active auction where end_time covers the past
-    Listing.objects.filter(is_active=True, end_time__lt=now).update(is_active=False)
+# Removed moved functions (get_current_session_info, calculate_listing_end_time, send_auction_notifications, auto_end_expired_auctions)
+# Logic is now in utils.py to support background tasks
 
 def home(request):
     """Home page view showing latest auctions for current session"""
@@ -235,11 +114,13 @@ def marketplace(request):
     # Upcoming evening auctions (shown during break time)
     upcoming_evening = Listing.objects.none()
     if session_info['is_break']:
+        # Include evening-only sessions AND whole-day sessions (which are on break)
         upcoming_evening = Listing.objects.filter(
             is_active=True,
             evening_session=True,
             end_time__date=today
-        ).exclude(morning_session=True).order_by('-created_at')
+        ).order_by('-created_at')
+        # Note: We removed the .exclude(morning_session=True) so morning+evening are included here
     
     # Ended auctions today
     ended_today = Listing.objects.filter(
@@ -346,6 +227,11 @@ def place_bid(request, listing_id):
     # Check if auction has started
     if listing.start_time > timezone.now():
         messages.error(request, f"This auction starts at {listing.start_time.strftime('%I:%M %p')}")
+        return redirect('auction_detail', listing_id=listing_id)
+        
+    # Check if auction is on break
+    if listing.is_break_time:
+        messages.error(request, "Bidding is paused during the break (1:30 PM - 2:15 PM). Resumes at 2:15 PM.")
         return redirect('auction_detail', listing_id=listing_id)
         
     bid_amount = request.POST.get('amount')
@@ -879,6 +765,38 @@ def dashboard(request):
             context['active_bids_count'] = user_bids.filter(listing__is_active=True).values('listing').distinct().count()
             context['won_auctions_count'] = Listing.objects.filter(is_active=False, bids__buyer=request.user).distinct().count()
             context['recent_bids'] = user_bids.order_by('-timestamp')[:5]
+            
+            # Graph Data for Buyer: Last 7 days bids count
+            days = []
+            morning_counts = []
+            evening_counts = []
+            for i in range(6, -1, -1):
+                date = (timezone.now() - timedelta(days=i)).date()
+                days.append(date.strftime('%b %d'))
+                
+                # Filter bids for this user on this day
+                day_bids = user_bids.filter(timestamp__date=date)
+                
+                # Count by session time
+                m_count = 0
+                e_count = 0
+                for b in day_bids:
+                    t = timezone.localtime(b.timestamp).time()
+                    if MORNING_START <= t < MORNING_END:
+                        m_count += 1
+                    elif EVENING_START <= t <= EVENING_END:
+                        e_count += 1
+                    else:
+                        # Fallback to listing session if outside strict times but on that day
+                        if b.listing.morning_session: m_count += 1
+                        elif b.listing.evening_session: e_count += 1
+                
+                morning_counts.append(m_count)
+                evening_counts.append(e_count)
+            
+            context['graph_labels'] = days
+            context['graph_morning'] = morning_counts
+            context['graph_evening'] = evening_counts
         
         return render(request, "dashboard/buyer.html", context)
         
@@ -898,6 +816,35 @@ def dashboard(request):
             context['active_auctions_count'] = Listing.objects.filter(is_active=True).count()
             context['pending_verifications_count'] = User.objects.filter(is_verified=False).count()
             context['recent_users'] = User.objects.order_by('-date_joined')[:5]
+            
+            # Graph Data for Admin: Platform wide bids count
+            days = []
+            morning_counts = []
+            evening_counts = []
+            all_bids = Bid.objects.all()
+            for i in range(6, -1, -1):
+                date = (timezone.now() - timedelta(days=i)).date()
+                days.append(date.strftime('%b %d'))
+                
+                day_bids = all_bids.filter(timestamp__date=date)
+                m_count = 0
+                e_count = 0
+                for b in day_bids:
+                    t = timezone.localtime(b.timestamp).time()
+                    if MORNING_START <= t < MORNING_END:
+                        m_count += 1
+                    elif EVENING_START <= t <= EVENING_END:
+                        e_count += 1
+                    else:
+                        if b.listing.morning_session: m_count += 1
+                        elif b.listing.evening_session: e_count += 1
+
+                morning_counts.append(m_count)
+                evening_counts.append(e_count)
+            
+            context['graph_labels'] = days
+            context['graph_morning'] = morning_counts
+            context['graph_evening'] = evening_counts
         elif section == 'users':
             context['all_users'] = User.objects.all().order_by('-date_joined')
         elif section == 'auctions':

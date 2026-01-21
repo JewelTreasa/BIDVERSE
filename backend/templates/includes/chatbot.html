@@ -1,0 +1,22 @@
+<!-- Chatbot Container -->
+<div id="chatbotFab" class="chatbot-fab {% if not user.is_authenticated %}role-support{% elif user.user_type == 'BUYER' %}role-buyer{% elif user.user_type == 'FARMER' %}role-seller{% elif user.is_superuser %}role-admin{% endif %}">
+    <i class="fas fa-comment-dots"></i>
+</div>
+
+<div id="chatbotWindow" class="chatbot-window {% if not user.is_authenticated %}role-support{% elif user.user_type == 'BUYER' %}role-buyer{% elif user.user_type == 'FARMER' %}role-seller{% elif user.is_superuser %}role-admin{% endif %}">
+    <div class="chat-header">
+        <div>
+            <h3 id="botName">{% if not user.is_authenticated %}Support Bot{% elif user.user_type == 'BUYER' %}Bid Bot{% elif user.user_type == 'FARMER' %}Crop Bot{% else %}Shield Bot{% endif %}</h3>
+            <span class="role-label" id="botRole">{% if not user.is_authenticated %}Platform Guide{% elif user.user_type == 'BUYER' %}Bidding Assistant{% elif user.user_type == 'FARMER' %}Listing Expert{% else %}System Monitor{% endif %}</span>
+        </div>
+        <i class="fas fa-times" style="cursor: pointer;" onclick="document.getElementById('chatbotWindow').style.display='none'"></i>
+    </div>
+    <div id="chatMessages" class="chat-messages"></div>
+    <div id="chatTyping" class="typing" style="padding: 0 20px;">Assistant is typing...</div>
+    <div class="chat-input-area">
+        <input type="text" id="chatInput" class="chat-input" placeholder="How can I help you?">
+        <button id="chatSend" class="chat-send">
+            <i class="fas fa-paper-plane"></i>
+        </button>
+    </div>
+</div>

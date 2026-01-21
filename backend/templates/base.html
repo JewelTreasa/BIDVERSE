@@ -1,35 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}BidVerse - Agricultural Commodity Online Auction System{% endblock %}</title>
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
 
-    <!-- Custom styles -->
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- BidVerse Styles -->
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="stylesheet" href="/assets/css/chatbot.css">
+    
     <style>
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        /* Global Navbar Green Color Updates (#bef264) */
+        
+        /* Profile & Notification Icons */
+        .navbar .profile-icon-btn {
+            color: #bef264 !important; /* Lime Green */
+        }
+        
+        .navbar .profile-icon-btn:hover {
+            color: #a3e635 !important; /* Slightly lighter/different on hover */
+        }
+        
+        /* Navbar Green Buttons (e.g. Get Started) */
+        .navbar .btn-primary {
+            background-color: #bef264 !important;
+            border-color: #bef264 !important;
+            color: #1a2e05 !important; /* Dark green text for contrast */
+            font-weight: 600;
+        }
+        
+        .navbar .btn-primary:hover {
+            background-color: #a3e635 !important;
+            border-color: #a3e635 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(190, 242, 100, 0.3);
+            color: #1a2e05 !important;
         }
     </style>
+    
+    {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-gray-50">
+
+<body {% if user.is_authenticated %}data-user-role="{{ user.user_type }}"{% endif %}>
     <!-- Navigation -->
-    <nav class="bg-white shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <a href="{% url 'home' %}" class="text-2xl font-bold text-blue-600">
-                        Bid<span class="text-blue-800">Verse</span>
-                    </a>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="{% url 'login' %}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Login</a>
-                    <a href="{% url 'register' %}" class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium">Sign Up</a>
-                </div>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="{% url 'home' %}" class="logo">
+                <svg class="logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 5C20 5 12 10 12 20C12 25 16 30 20 32C24 30 28 25 28 20C28 10 20 5 20 5Z" fill="#2e7d32"
+                        fill-opacity="0.15" />
+                    <path d="M20 5C20 5 28 10 28 20C28 25 24 30 20 32V5Z" fill="#2e7d32" />
+                    <path d="M20 18L28 18L28 22L20 22L20 18Z" fill="#1b5e20" />
+                    <rect x="18" y="15" width="4" height="12" rx="2" fill="#1b5e20" />
+                    <circle cx="20" cy="35" r="2" fill="#2e7d32" />
+                </svg>
+                <span>Bid<span class="highlight">Verse</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="{% url 'home' %}#how-it-works">How It Works</a>
+                <a href="{% url 'home' %}#auctions">Auctions</a>
+                <a href="{% url 'marketplace' %}">Marketplace</a>
+                <a href="{% url 'contact' %}">Contact</a>
             </div>
+            <div class="nav-buttons">
+                {% if user.is_authenticated %}
+                <span class="user-name-nav">Hi, {{ user.first_name }}</span>
+                
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <!-- Profile Dropdown -->
+                    <div class="profile-dropdown">
+                        <button class="profile-icon-btn" onclick="toggleProfileDropdown()" aria-label="Profile">
+                            <i class="fas fa-user-circle"></i>
+                        </button>
+                        <div class="dropdown-menu" id="profileDropdown">
+                            <div class="dropdown-header">
+                                <span class="user-name">{{ user.first_name }} {{ user.last_name }}</span>
+                                <span class="user-email">{{ user.email }}</span>
+                            </div>
+                            <a href="{% url 'dashboard' %}" class="dropdown-item">
+                                <i class="fas fa-columns"></i> Dashboard
+                            </a>
+                            <a href="{% url 'logout' %}" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i> Log Out
+                            </a>
+                        </div>
+                    </div>
+
+                    {% if user.user_type == 'BUYER' %}
+                    <!-- Notification Dropdown -->
+                    <div class="profile-dropdown">
+                        <button class="profile-icon-btn" onclick="toggleNotificationDropdown()" aria-label="Notifications" style="position: relative;">
+                            <i class="fas fa-bell"></i>
+                            <span id="notif-badge" style="position: absolute; top: 0; right: 0; background: #dc2626; color: white; border-radius: 50%; width: 8px; height: 8px; display: none;"></span>
+                        </button>
+                        <div class="dropdown-menu" id="notificationDropdown" style="width: 300px; right: 0;">
+                            <div class="dropdown-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="user-name-drop">Notifications</span>
+                                <small id="mark-all-read" style="cursor: pointer; color: #bef264; display: none;">Mark all read</small>
+                            </div>
+                            <div id="notification-list" style="max-height: 300px; overflow-y: auto;">
+                                <div style="padding: 1rem; text-align: center; color: #666;">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% else %}
+                <a href="{% url 'login' %}" class="btn btn-outline">Log In</a>
+                <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
+                {% endif %}
+            </div>
+            <button class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
         </div>
     </nav>
 
@@ -39,18 +134,57 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t mt-12">
-        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-            <p class="text-center text-sm text-gray-500">
-                © 2025 BidVerse. All rights reserved.
-            </p>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <a href="{% url 'home' %}" class="logo footer-logo">Bid<span class="highlight">Verse</span></a>
+                    <p>Empowering farmers and buyers with a digital, transparent, and fair auction platform.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="{% url 'home' %}#how-it-works">How It Works</a></li>
+                        <li><a href="{% url 'home' %}#auctions">Auctions</a></li>
+                        <li><a href="{% url 'marketplace' %}">Marketplace</a></li>
+                        <li><a href="{% url 'contact' %}">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="{% url 'help_center' %}">Help Center</a></li>
+                        <li><a href="{% url 'terms' %}">Terms of Service</a></li>
+                        <li><a href="{% url 'privacy_policy' %}">Privacy Policy</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Connect With Us</h4>
+                    <div class="social-icons">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 BidVerse. All rights reserved.</p>
+            </div>
         </div>
     </footer>
+
+    <!-- Chatbot Container -->
+    {% include 'includes/chatbot.html' %}
 
     <!-- CSRF token for AJAX requests -->
     <script>
         // Make CSRF token available globally for AJAX requests
         window.CSRF_TOKEN = '{{ csrf_token }}';
     </script>
+    <script src="/assets/js/script.js"></script>
+    <script src="/assets/js/chatbot.js?v=2"></script>
+    {% block extra_scripts %}{% endblock %}
 </body>
+
 </html>

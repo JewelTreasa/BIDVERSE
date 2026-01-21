@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Contact Us - BidVerse{% endblock %}
+
+{% block content %}
+<!-- Contact Hero Section -->
+<section class="section contact-hero bg-light" style="padding: 60px 0; background: #f8fafc;">
+    <div class="container">
+        <div class="section-header text-center" style="margin-bottom: 0;">
+            <h1 style="font-family: 'Playfair Display', serif; font-size: 42px; color: var(--text-dark); margin-bottom: 15px;">Contact Us</h1>
+            <p style="color: #64748b; font-size: 18px; max-width: 600px; margin: 0 auto;">Get in touch with our team for support, partnerships, or questions about BidVerse</p>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Form & Info -->
+<section class="section contact-section" style="padding: 80px 0;">
+    <div class="container">
+        <div class="contact-grid" style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 50px;">
+            <!-- Contact Form -->
+            <div class="contact-form-container" style="background: white; padding: 40px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+                <h2 style="font-family: 'Playfair Display', serif; font-size: 28px; margin-bottom: 30px; color: var(--text-dark);">Send us a Message</h2>
+                
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}" style="padding: 15px; border-radius: 12px; margin-bottom: 25px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form class="contact-form" method="POST" action="{% url 'contact' %}">
+                    {% csrf_token %}
+                    <div class="form-row-split" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div class="form-group">
+                            <label for="contact-name" style="display: block; margin-bottom: 8px; font-weight: 500; color: #475569;">Full Name</label>
+                            <input type="text" id="contact-name" name="name" placeholder="Your Name" required
+                                style="width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: 'Outfit';">
+                        </div>
+                        <div class="form-group">
+                            <label for="contact-email" style="display: block; margin-bottom: 8px; font-weight: 500; color: #475569;">Email Address</label>
+                            <input type="email" id="contact-email" name="email" placeholder="your@email.com" required
+                                style="width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: 'Outfit';">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="contact-subject" style="display: block; margin-bottom: 8px; font-weight: 500; color: #475569;">Subject</label>
+                        <select id="contact-subject" name="subject" required
+                            style="width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: 'Outfit'; background: white;">
+                            <option value="" disabled selected>Select a topic</option>
+                            <option value="support">Technical Support</option>
+                            <option value="partnership">Partnership Inquiry</option>
+                            <option value="sales">Sales Question</option>
+                            <option value="feedback">Feedback</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 30px;">
+                        <label for="contact-message" style="display: block; margin-bottom: 8px; font-weight: 500; color: #475569;">Message</label>
+                        <textarea id="contact-message" name="message" placeholder="Tell us how we can help..." rows="6" required
+                            style="width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: 'Outfit'; resize: vertical;"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 16px; font-size: 18px; font-weight: 600; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <i class="fas fa-paper-plane"></i> Send Message
+                    </button>
+                </form>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="contact-info-container">
+                <h2 style="font-family: 'Playfair Display', serif; font-size: 28px; margin-bottom: 20px; color: var(--text-dark);">Get in Touch</h2>
+                <p style="color: #64748b; margin-bottom: 30px;">We're here to help you succeed in agricultural trading. Reach out through any of these channels.</p>
+
+                <div class="contact-cards" style="display: grid; gap: 20px;">
+                    <!-- Phone -->
+                    <div class="contact-card" style="display: flex; gap: 20px; align-items: center; background: #f8fafc; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0;">
+                        <div class="contact-icon" style="width: 50px; height: 50px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary-green); font-size: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <div class="contact-details">
+                            <h4 style="font-size: 18px; margin-bottom: 4px; color: var(--text-dark);">Call Us</h4>
+                            <p style="color: #64748b; font-weight: 600;">+91 98765 43210</p>
+                            <p style="font-size: 13px; color: #94a3b8;">Mon-Fri, 9AM-6PM IST</p>
+                        </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="contact-card" style="display: flex; gap: 20px; align-items: center; background: #f8fafc; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0;">
+                        <div class="contact-icon" style="width: 50px; height: 50px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary-green); font-size: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="contact-details">
+                            <h4 style="font-size: 18px; margin-bottom: 4px; color: var(--text-dark);">Email Us</h4>
+                            <p style="color: #64748b; font-weight: 600;">support@bidverse.com</p>
+                            <p style="font-size: 13px; color: #94a3b8;">We respond within 24 hours</p>
+                        </div>
+                    </div>
+
+                    <!-- Location -->
+                    <div class="contact-card" style="display: flex; gap: 20px; align-items: center; background: #f8fafc; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0;">
+                        <div class="contact-icon" style="width: 50px; height: 50px; background: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary-green); font-size: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="contact-details">
+                            <h4 style="font-size: 18px; margin-bottom: 4px; color: var(--text-dark);">Visit Us</h4>
+                            <p style="color: #64748b; font-size: 15px; line-height: 1.4;">123 Agriculture Street<br>Tech Park, Bangalore 560001<br>India</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="section faq-section bg-light" style="padding: 100px 0; background: #f8fafc;">
+    <div class="container">
+        <div class="section-header text-center" style="margin-bottom: 60px;">
+            <h2 style="font-family: 'Playfair Display', serif; font-size: 36px; color: var(--text-dark); margin-bottom: 15px;">Frequently Asked Questions</h2>
+            <p style="color: #64748b; font-size: 18px;">Quick answers to common questions</p>
+        </div>
+
+        <div class="faq-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+            <div class="faq-item" style="background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.02); transition: transform 0.3s;">
+                <h4 style="font-size: 18px; color: var(--text-dark); margin-bottom: 12px; font-weight: 700;">How do I get started with BidVerse?</h4>
+                <p style="color: #64748b; font-size: 15px; line-height: 1.6;">Simply register as a farmer or buyer, complete your profile verification, and start participating in auctions immediately.</p>
+            </div>
+
+            <div class="faq-item" style="background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.02); transition: transform 0.3s;">
+                <h4 style="font-size: 18px; color: var(--text-dark); margin-bottom: 12px; font-weight: 700;">Is my payment secure?</h4>
+                <p style="color: #64748b; font-size: 15px; line-height: 1.6;">Yes, we use bank-grade security and escrow-like payment systems to protect both buyers and sellers throughout the transaction.</p>
+            </div>
+
+            <div class="faq-item" style="background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.02); transition: transform 0.3s;">
+                <h4 style="font-size: 18px; color: var(--text-dark); margin-bottom: 12px; font-weight: 700;">How are auctions conducted?</h4>
+                <p style="color: #64748b; font-size: 15px; line-height: 1.6;">Auctions run for a set time period. Place your bids in real-time, and the highest bidder wins when the auction ends.</p>
+            </div>
+
+            <div class="faq-item" style="background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.02); transition: transform 0.3s;">
+                <h4 style="font-size: 18px; color: var(--text-dark); margin-bottom: 12px; font-weight: 700;">What commodities can I trade?</h4>
+                <p style="color: #64748b; font-size: 15px; line-height: 1.6;">We support a wide range of agricultural commodities including grains, spices, pulses, and cash crops from verified farmers.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

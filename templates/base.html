@@ -18,9 +18,41 @@
 
     <!-- BidVerse Styles -->
     <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="stylesheet" href="/assets/css/chatbot.css">
+    
+    <style>
+        /* Global Navbar Green Color Updates (#bef264) */
+        
+        /* Profile & Notification Icons */
+        .navbar .profile-icon-btn {
+            color: #bef264 !important; /* Lime Green */
+        }
+        
+        .navbar .profile-icon-btn:hover {
+            color: #a3e635 !important; /* Slightly lighter/different on hover */
+        }
+        
+        /* Navbar Green Buttons (e.g. Get Started) */
+        .navbar .btn-primary {
+            background-color: #bef264 !important;
+            border-color: #bef264 !important;
+            color: #1a2e05 !important; /* Dark green text for contrast */
+            font-weight: 600;
+        }
+        
+        .navbar .btn-primary:hover {
+            background-color: #a3e635 !important;
+            border-color: #a3e635 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(190, 242, 100, 0.3);
+            color: #1a2e05 !important;
+        }
+    </style>
+    
+    {% block extra_head %}{% endblock %}
 </head>
 
-<body>
+<body {% if user.is_authenticated %}data-user-role="{{ user.user_type }}"{% endif %}>
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container nav-container">
@@ -36,10 +68,10 @@
                 <span>Bid<span class="highlight">Verse</span></span>
             </a>
             <div class="nav-links">
-                <a href="#how-it-works">How It Works</a>
-                <a href="#auctions">Auctions</a>
-                <a href="#features">Features</a>
-                <a href="#contact">Contact</a>
+                <a href="{% url 'home' %}#how-it-works">How It Works</a>
+                <a href="{% url 'home' %}#auctions">Auctions</a>
+                <a href="{% url 'marketplace' %}">Marketplace</a>
+                <a href="{% url 'contact' %}">Contact</a>
             </div>
             <div class="nav-buttons">
                 {% if user.is_authenticated %}
@@ -75,7 +107,7 @@
                         <div class="dropdown-menu" id="notificationDropdown" style="width: 300px; right: 0;">
                             <div class="dropdown-header" style="display: flex; justify-content: space-between; align-items: center;">
                                 <span class="user-name-drop">Notifications</span>
-                                <small id="mark-all-read" style="cursor: pointer; color: #2e7d32; display: none;">Mark all read</small>
+                                <small id="mark-all-read" style="cursor: pointer; color: #bef264; display: none;">Mark all read</small>
                             </div>
                             <div id="notification-list" style="max-height: 300px; overflow-y: auto;">
                                 <div style="padding: 1rem; text-align: center; color: #666;">
@@ -112,10 +144,10 @@
                 <div class="footer-col">
                     <h4>Quick Links</h4>
                     <ul>
-                        <li><a href="#how-it-works">How It Works</a></li>
-                        <li><a href="#auctions">Auctions</a></li>
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="#about">About Us</a></li>
+                        <li><a href="{% url 'home' %}#how-it-works">How It Works</a></li>
+                        <li><a href="{% url 'home' %}#auctions">Auctions</a></li>
+                        <li><a href="{% url 'marketplace' %}">Marketplace</a></li>
+                        <li><a href="{% url 'contact' %}">Contact</a></li>
                     </ul>
                 </div>
                 <div class="footer-col">
@@ -124,7 +156,6 @@
                         <li><a href="{% url 'help_center' %}">Help Center</a></li>
                         <li><a href="{% url 'terms' %}">Terms of Service</a></li>
                         <li><a href="{% url 'privacy_policy' %}">Privacy Policy</a></li>
-                        <li><a href="{% url 'contact' %}">Contact Us</a></li>
                     </ul>
                 </div>
                 <div class="footer-col">
@@ -143,12 +174,17 @@
         </div>
     </footer>
 
+    <!-- Chatbot Container -->
+    {% include 'includes/chatbot.html' %}
+
     <!-- CSRF token for AJAX requests -->
     <script>
         // Make CSRF token available globally for AJAX requests
         window.CSRF_TOKEN = '{{ csrf_token }}';
     </script>
     <script src="/assets/js/script.js"></script>
+    <script src="/assets/js/chatbot.js?v=2"></script>
+    {% block extra_scripts %}{% endblock %}
 </body>
 
 </html>

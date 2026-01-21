@@ -143,7 +143,13 @@ window.loadNotifications = function() {
             let hasUnread = false;
             let html = '';
             data.forEach(notif => {
-                if (!notif.is_read) hasUnread = true;
+                if (!notif.is_read) {
+                    hasUnread = true;
+                    // Check for WIN notification to show celebration
+                    if (notif.notification_type === 'WIN') {
+                        showWinCelebration(notif);
+                    }
+                }
                 const bg = notif.is_read ? 'white' : '#f0fdf4';
                 const time = new Date(notif.created_at).toLocaleString();
                 html += `
@@ -214,4 +220,57 @@ window.addEventListener('click', function (e) {
         }
     }
 });
+
+// Win Celebration Logic
+window.showWinCelebration = function(notif) {
+    const modal = document.getElementById('winCelebrationModal');
+    const msg = document.getElementById('winMessage');
+    if (!modal || !msg) return;
+
+    msg.innerText = notif.message;
+    modal.style.display = 'flex';
+    
+    // Trigger Confetti
+    triggerConfetti();
+
+    // Mark as read so it doesn't pop up again
+    fetch(`/notifications/mark/${notif.id}/`);
+};
+
+window.closeWinCelebration = function() {
+    const modal = document.getElementById('winCelebrationModal');
+    if (modal) modal.style.display = 'none';
+};
+
+window.triggerConfetti = function() {
+    if (typeof confetti === 'function') {
+        const duration = 5 * 1000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 2000 };
+
+        function randomInRange(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        const interval = setInterval(function() {
+            const timeLeft = animationEnd - Date.now();
+
+            if (timeLeft <= 0) {
+                return clearInterval(interval);
+            }
+
+            const particleCount = 50 * (timeLeft / duration);
+            // since particles fall down, start a bit higher than random
+            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+        }, 250);
+    } else {
+        console.warn('Confetti library not loaded');
+    }
+};
+
+// Initial notification load to check for wins on page load
+if (document.getElementById('notif-badge')) {
+    setTimeout(loadNotifications, 1000);
+}
 

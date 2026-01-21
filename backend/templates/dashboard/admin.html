@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seller Dashboard - BidVerse</title>
+    <title>Admin Dashboard - BidVerse</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -13,8 +13,7 @@
     <link rel="stylesheet" href="/assets/css/styles.css">
     <link rel="stylesheet" href="/assets/css/chatbot.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Flatpickr CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .dashboard-container {
             padding: 120px 0 60px;
@@ -46,8 +45,8 @@
         .user-avatar {
             width: 80px;
             height: 80px;
-            background: #ecfccb;
-            color: #4d7c0f;
+            background: #e8f5e9;
+            color: #dc2626;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -66,8 +65,8 @@
         .user-role {
             font-size: 14px;
             color: #666;
-            background: #ecfccb;
-            color: #365314;
+            background: #fee2e2;
+            color: #b91c1c;
             padding: 4px 12px;
             border-radius: 20px;
             display: inline-block;
@@ -95,8 +94,8 @@
 
         .nav-link:hover,
         .nav-link.active {
-            background: #ecfccb;
-            color: #365314;
+            background: #fee2e2;
+            color: #b91c1c;
         }
 
         .nav-link i {
@@ -137,19 +136,19 @@
             font-size: 24px;
         }
 
-        .stat-icon.green {
-            background: #dcfce7;
-            color: #166534;
+        .stat-icon.red {
+            background: #fee2e2;
+            color: #dc2626;
         }
 
         .stat-icon.blue {
-            background: #e0f2fe;
-            color: #0284c7;
+            background: #e3f2fd;
+            color: #1976d2;
         }
 
-        .stat-icon.orange {
-            background: #ffedd5;
-            color: #c2410c;
+        .stat-icon.purple {
+            background: #f3e8ff;
+            color: #9333ea;
         }
 
         .stat-info h3 {
@@ -298,17 +297,16 @@
             color: #2563eb;
         }
 
-        .delete-btn:hover {
-            color: #991b1b !important;
-        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
 
-        label input[type="checkbox"]:checked+div {
-            color: var(--primary-green);
-        }
-
-        label:has(input[type="checkbox"]:checked) {
-            border-color: var(--primary-green) !important;
-            background: #ecfccb;
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Modal Styles */
@@ -415,7 +413,7 @@
     </style>
 </head>
 
-<body data-user-role="FARMER">
+<body data-user-role="ADMIN">
 
     <!-- Navigation -->
     <nav class="navbar">
@@ -486,142 +484,179 @@
     <!-- Dashboard Content -->
     <section class="dashboard-container">
         <div class="container dashboard-grid">
-            <!-- Sidebar -->
+            <!-- Admin Sidebar -->
             <aside class="sidebar">
                 <div class="user-profile">
                     <div class="user-avatar">
-                        <i class="fas fa-tractor"></i>
+                        <i class="fas fa-user-shield"></i>
                     </div>
                     <h3 class="user-name">{{ user.get_full_name|default:user.email }}</h3>
-                    <span class="user-role">FARMER (SELLER)</span>
+                    <span class="user-role">ADMINISTRATOR</span>
                 </div>
                 <ul class="nav-menu">
-                    <li class="nav-item"><a href="?section=dashboard"
-                            class="nav-link {% if section == 'dashboard' or not section %}active{% endif %}"><i
-                                class="fas fa-th-large"></i>
-                            Dashboard</a></li>
-                    <li class="nav-item"><a href="?section=listings"
-                            class="nav-link {% if section == 'listings' %}active{% endif %}"><i class="fas fa-list"></i>
-                            My Listings</a></li>
-                    <li class="nav-item"><a href="?section=add_listing"
-                            class="nav-link {% if section == 'add_listing' %}active{% endif %}"><i
-                                class="fas fa-plus-circle"></i> Add Listed</a>
+                    <li class="nav-item">
+                        <a href="?section=dashboard" class="nav-link {% if section == 'dashboard' %}active{% endif %}">
+                            <i class="fas fa-th-large"></i> Overview
+                        </a>
                     </li>
-                    <li class="nav-item"><a href="?section=sales"
-                            class="nav-link {% if section == 'sales' %}active{% endif %}"><i
-                                class="fas fa-chart-line"></i> Sales
-                            History</a></li>
-                    <li class="nav-item"><a href="?section=payments"
-                            class="nav-link {% if section == 'payments' %}active{% endif %}"><i
-                                class="fas fa-wallet"></i> Payments</a></li>
-                    <li class="nav-item"><a href="?section=settings"
-                            class="nav-link {% if section == 'settings' %}active{% endif %}"><i class="fas fa-cog"></i>
-                            Settings</a></li>
+                    <li class="nav-item">
+                        <a href="?section=users" class="nav-link {% if section == 'users' %}active{% endif %}">
+                            <i class="fas fa-users-cog"></i> User Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="?section=auctions" class="nav-link {% if section == 'auctions' %}active{% endif %}">
+                            <i class="fas fa-gavel"></i> Monitor Auctions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="?section=categories"
+                            class="nav-link {% if section == 'categories' %}active{% endif %}">
+                            <i class="fas fa-tags"></i> Categories
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="?section=reports" class="nav-link {% if section == 'reports' %}active{% endif %}">
+                            <i class="fas fa-file-alt"></i> Reports
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="?section=settings" class="nav-link {% if section == 'settings' %}active{% endif %}">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                    </li>
                 </ul>
             </aside>
 
             <!-- Main Content -->
             <main class="main-content">
                 {% if section == 'dashboard' or not section %}
+                <!-- Stats Row -->
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon green"><i class="fas fa-leaf"></i></div>
+                        <div class="stat-icon red"><i class="fas fa-users"></i></div>
                         <div class="stat-info">
-                            <h3>{{ active_listings_count|default:0 }}</h3>
-                            <p>Active Listings</p>
+                            <h3>{{ total_users_count|default:"0" }}</h3>
+                            <p>Total Users</p>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon blue"><i class="fas fa-box-open"></i></div>
+                        <div class="stat-icon blue"><i class="fas fa-gavel"></i></div>
                         <div class="stat-info">
-                            <h3>{{ items_sold|default:0 }}</h3>
-                            <p>Items Sold</p>
+                            <h3>{{ active_auctions_count|default:"0" }}</h3>
+                            <p>Active Auctions</p>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon orange"><i class="fas fa-rupee-sign"></i></div>
+                        <div class="stat-icon purple"><i class="fas fa-exclamation-circle"></i></div>
                         <div class="stat-info">
-                            <h3>₹{{ total_revenue|default:"0" }}</h3>
-                            <p>Total Revenue</p>
+                            <h3>{{ pending_verifications_count|default:"0" }}</h3>
+                            <p>Pending Verifications</p>
                         </div>
                     </div>
                 </div>
 
+                <!-- Recent Users -->
                 <div class="content-card">
                     <div class="card-header">
-                        <h2>My Live Listings</h2>
-                        <div>
-                            <a href="/#auctions" class="btn btn-outline btn-sm">Browse More</a>
-                            <a href="?section=add_listing" class="btn btn-primary btn-sm">+ New Listing</a>
-                        </div>
+                        <h2>Recent Registrations</h2>
+                        <a href="?section=users" class="btn btn-outline btn-sm">View All Users</a>
                     </div>
                     <table class="action-table">
                         <thead>
                             <tr>
-                                <th>Commodity</th>
-                                <th>Base Price</th>
-                                <th>Highest Bid</th>
-                                <th>Starts At</th>
-                                <th>Ends In</th>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Joined</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for listing in live_listings %}
+                            {% for user_obj in recent_users %}
                             <tr>
-                                <td>{{ listing.commodity }}</td>
-                                <td>₹{{ listing.base_price }}/kg</td>
-                                <td>₹{{ listing.current_highest_bid|default:listing.base_price }}/kg</td>
-                                <td>
-                                    {% if listing.morning_session and not listing.evening_session %}
-                                    {{ listing.listing_date|date:"M d" }} 9:30 AM
-                                    {% elif listing.evening_session and not listing.morning_session %}
-                                    {{ listing.listing_date|date:"M d" }} 2:15 PM
-                                    {% elif listing.morning_session and listing.evening_session %}
-                                    {{ listing.listing_date|date:"M d" }} 9:30 AM & 2:15 PM
-                                    {% else %}
-                                    {{ listing.listing_date|date:"M d, H:i" }}
-                                    {% endif %}
-                                </td>
-                                <td style="color: #c2410c;">
-                                    {% if listing.morning_session and not listing.evening_session %}
-                                    1:30 PM
-                                    {% elif listing.evening_session and not listing.morning_session %}
-                                    6:15 PM
-                                    {% elif listing.morning_session and listing.evening_session %}
-                                    6:15 PM
-                                    {% else %}
-                                    {{ listing.end_time|date:"g:i A" }}
-                                    {% endif %}
-                                </td>
+                                <td>{{ user_obj.get_full_name|default:user_obj.username }}</td>
+                                <td>{{ user_obj.email }}</td>
+                                <td>{{ user_obj.user_type }}</td>
+                                <td>{{ user_obj.date_joined|date:"M d, Y" }}</td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5" style="text-align: center; padding: 30px; color: #666;">No active
-                                    listings found. <a href="?section=add_listing"
-                                        style="color: var(--primary-green);">Create one now?</a></td>
+                                <td colspan="4" style="text-align: center; padding: 20px;">No recent users.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
 
-                {% elif section == 'listings' %}
+                {% elif section == 'users' %}
                 <div class="content-card">
-                    <div class="card-header" style="flex-direction: column; gap: 20px; align-items: stretch;">
+                    <div class="card-header">
+                        <h2>User Management</h2>
+                    </div>
+                    <table class="action-table">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Verified</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user_obj in all_users %}
+                            <tr>
+                                <td>{{ user_obj.email }}</td>
+                                <td>{{ user_obj.get_full_name }}</td>
+                                <td>{{ user_obj.user_type }}</td>
+                                <td>
+                                    {% if user_obj.is_verified %}
+                                    <span style="color: green;">Yes</span>
+                                    {% else %}
+                                    <span style="color: red;">No</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 5px;">
+                                        {% if not user_obj.is_verified %}
+                                        <form method="POST" action="?section=users">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="user_id" value="{{ user_obj.id }}">
+                                            <input type="hidden" name="action" value="verify">
+                                            <button type="submit" class="btn btn-primary btn-sm"
+                                                style="padding: 4px 8px; font-size: 12px; background: #166534;">Verify</button>
+                                        </form>
+                                        {% endif %}
+                                        <a href="#" class="btn btn-outline btn-sm"
+                                            style="padding: 4px 8px; font-size: 12px;">Edit</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% elif section == 'auctions' %}
+                <div class="content-card">
+                    <div class="card-header" style="flex-direction: column; gap: 20px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <h2>All My Listings</h2>
-                            <a href="?section=add_listing" class="btn btn-primary btn-sm">+ New Listing</a>
+                            <h2>Auction Monitoring</h2>
+                            <span class="badge"
+                                style="background: #e0f2f1; color: #166534; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;">
+                                <i class="fas fa-sync-alt" style="margin-right: 6px;"></i>Real-time
+                            </span>
                         </div>
                         
                         <form method="GET" action="." style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr auto; gap: 12px; align-items: center;">
-                            <input type="hidden" name="section" value="listings">
+                            <input type="hidden" name="section" value="auctions">
                             
                             <!-- Search -->
                             <div style="position: relative;">
                                 <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
-                                <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Search my listings..." 
+                                <input type="text" name="search" value="{{ request.GET.search }}" placeholder="Search auctions..." 
                                     style="width: 100%; padding: 10px 14px 10px 40px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: #f9fafb; transition: all 0.2s;"
-                                    onfocus="this.style.background='white'; this.style.borderColor='#166534';"
+                                    onfocus="this.style.background='white'; this.style.borderColor='#2e7d32';"
                                     onblur="this.style.background='#f9fafb'; this.style.borderColor='#e5e7eb';">
                             </div>
                             
@@ -631,7 +666,7 @@
                                 <select name="status" onchange="this.form.submit()" 
                                     style="width: 100%; padding: 10px 14px 10px 36px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white; appearance: none; cursor: pointer;">
                                     <option value="">All Statuses</option>
-                                    <option value="live" {% if request.GET.status == 'live' %}selected{% endif %}>Live</option>
+                                    <option value="live" {% if request.GET.status == 'live' %}selected{% endif %}>Live Auctions</option>
                                     <option value="upcoming" {% if request.GET.status == 'upcoming' %}selected{% endif %}>Upcoming</option>
                                     <option value="closed" {% if request.GET.status == 'closed' %}selected{% endif %}>Closed</option>
                                 </select>
@@ -645,8 +680,8 @@
                                     style="width: 100%; padding: 10px 14px 10px 36px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white; appearance: none; cursor: pointer;">
                                     <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>Newest</option>
                                     <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>Oldest</option>
-                                    <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price: High</option>
-                                    <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price: Low</option>
+                                    <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price: High-Low</option>
+                                    <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price: Low-High</option>
                                     <option value="date_asc" {% if request.GET.sort == 'date_asc' %}selected{% endif %}>Date: Soonest</option>
                                     <option value="date_desc" {% if request.GET.sort == 'date_desc' %}selected{% endif %}>Date: Latest</option>
                                 </select>
@@ -655,7 +690,7 @@
                             
                             <!-- Clear Button -->
                             {% if request.GET.search or request.GET.status or request.GET.sort %}
-                            <a href="?section=listings" class="btn" style="padding: 10px; color: #ef4444; border: 1px solid #fee2e2; background: #fef2f2; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Clear Filters">
+                            <a href="?section=auctions" class="btn" style="padding: 10px; color: #ef4444; border: 1px solid #fee2e2; background: #fef2f2; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Clear Filters">
                                 <i class="fas fa-times"></i>
                             </a>
                             {% else %}
@@ -663,217 +698,124 @@
                             {% endif %}
                         </form>
                     </div>
-                    {% csrf_token %}
-                    <style>
-                        input[name="csrfmiddlewaretoken"] {
-                            display: none;
-                        }
-                    </style>
                     <table class="action-table">
                         <thead>
                             <tr>
-                                <th>Commodity</th>
-                                <th>Base Price</th>
+                                <th>Listing</th>
+                                <th>Seller</th>
+                                <th>Date</th>
+                                <th>Highest Bid</th>
                                 <th>Status</th>
-                                <th>Created At</th>
-                                <th style="text-align: center; width: 60px;">Action</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for listing in listings %}
+                            {% for listing in all_listings %}
                             <tr>
                                 <td>{{ listing.commodity }}</td>
-                                <td>₹{{ listing.base_price }}/kg</td>
+                                <td>{{ listing.seller.email }}</td>
+                                <td>{{ listing.end_time|date:"M d, Y" }}</td>
+                                <td>₹{{ listing.current_highest_bid|default:listing.base_price }}</td>
                                 <td>
                                     {% now "Y-m-d H:i:s" as current_time %}
-                                    {% if not listing.is_active or listing.end_time|date:"Y-m-d H:i:s" < current_time %}
-                                    <span style="color: gray; font-weight: 500;">Closed</span>
-                                    {% elif listing.start_time|date:"Y-m-d H:i:s" > current_time %}
-                                    <span style="color: #f59e0b; font-weight: 500;">Upcoming</span>
+                                    {% if listing.end_time|date:"Y-m-d H:i:s" < current_time %}
+                                    <span style="color: gray;">Closed</span>
+                                    {% elif listing.start_time|date:"Y-m-d H:i:s" <= current_time %}
+                                    <span style="color: green;">Live</span>
                                     {% else %}
-                                    <span style="color: #166534; font-weight: 500;">Live</span>
+                                    <span style="color: #f59e0b;">Upcoming</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ listing.created_at|date:"M d, Y" }}</td>
-                                <td style="text-align: center;">
-                                    <button class="delete-btn" onclick="confirmDelete({{ listing.id }})"
-                                        title="Delete listing"
-                                        style="background: none; border: none; cursor: pointer; color: #dc2626; font-size: 18px; padding: 4px 8px; transition: color 0.2s;">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
+                                <td>
+                                    <form id="delete-form-{{ listing.id }}" method="POST"
+                                        action="{% url 'delete_listing' listing.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="button" onclick="confirmDelete('{{ listing.id }}')"
+                                            class="btn btn-outline btn-sm"
+                                            style="color: #dc2626; border-color: #dc2626;">Delete</button>
+                                    </form>
                                 </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5" style="text-align: center; padding: 30px; color: #666;">You haven't
-                                    created any listings yet.</td>
+                                <td colspan="6" style="text-align: center; padding: 20px;">No auctions found in system.
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
 
-                {% elif section == 'add_listing' %}
+                {% elif section == 'categories' %}
                 <div class="content-card">
                     <div class="card-header">
-                        <h2>Add New Listing</h2>
+                        <h2>Commodity Categories</h2>
+                        <button class="btn btn-primary btn-sm">+ Add Category</button>
                     </div>
-                    <form action="{% url 'dashboard' %}?section=add_listing" method="POST" enctype="multipart/form-data"
-                        style="display: grid; gap: 20px;">
-                        {% csrf_token %}
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Commodity Name</label>
-                            <input type="text" name="commodity" required placeholder="e.g. Basmati Rice"
-                                style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 20px 0;">
+                        <div
+                            style="padding: 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #eee; text-align: center;">
+                            <i class="fas fa-seedling"
+                                style="font-size: 24px; color: #2e7d32; margin-bottom: 10px; display: block;"></i>
+                            <h4 style="margin: 0;">Grains</h4>
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">12 Active Listings</p>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <div class="form-group">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Quantity</label>
-                                <input type="number" step="0.01" name="quantity" required placeholder="e.g. 500.00"
-                                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-                            </div>
-                            <div class="form-group">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Unit</label>
-                                <select name="unit" required
-                                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-                                    <option value="kg">Kilograms (kg)</option>
-                                    <option value="quintal">Quintal</option>
-                                    <option value="ton">Ton</option>
-                                    <option value="sheets">Sheets</option>
-                                    <option value="crates">Crates</option>
-                                </select>
-                            </div>
+                        <div
+                            style="padding: 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #eee; text-align: center;">
+                            <i class="fas fa-carrot"
+                                style="font-size: 24px; color: #f59e0b; margin-bottom: 10px; display: block;"></i>
+                            <h4 style="margin: 0;">Vegetables</h4>
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">8 Active Listings</p>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <div class="form-group">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Base Price (per
-                                    unit)</label>
-                                <input type="number" step="0.01" name="base_price" required placeholder="50.00"
-                                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-                            </div>
-                            <div class="form-group">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Listing
-                                    Date(s)</label>
-                                <input type="text" id="listing_date" name="listing_date" placeholder="Select dates..."
-                                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background-color: white;">
-                            </div>
+                        <div
+                            style="padding: 20px; background: #f8f9fa; border-radius: 12px; border: 1px solid #eee; text-align: center;">
+                            <i class="fas fa-apple-alt"
+                                style="font-size: 24px; color: #ef4444; margin-bottom: 10px; display: block;"></i>
+                            <h4 style="margin: 0;">Fruits</h4>
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">5 Active Listings</p>
                         </div>
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 12px; font-weight: 500;">Select
-                                Session(s)</label>
-                            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                                <label
-                                    style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #ddd; border-radius: 8px; transition: all 0.2s;">
-                                    <input type="checkbox" name="morning_session"
-                                        style="width: 20px; height: 20px; cursor: pointer;">
-                                    <div>
-                                        <strong>Morning Session</strong>
-                                        <div style="font-size: 12px; color: #666;">9:30 AM - 1:30 PM</div>
-                                    </div>
-                                </label>
-                                <label
-                                    style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 12px; border: 2px solid #ddd; border-radius: 8px; transition: all 0.2s;">
-                                    <input type="checkbox" name="evening_session"
-                                        style="width: 20px; height: 20px; cursor: pointer;">
-                                    <div>
-                                        <strong>Evening Session</strong>
-                                        <div style="font-size: 12px; color: #666;">2:15 PM - 6:15 PM</div>
-                                    </div>
-                                </label>
-                            </div>
-                            <small style="color: #666; margin-top: 8px; display: block;">You can select both sessions.
-                                Auction will automatically end at the appropriate time.</small>
-                        </div>
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Description</label>
-                            <textarea name="description" rows="4" placeholder="Tell buyers about your produce..."
-                                style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Upload Image of
-                                Product</label>
-                            <input type="file" name="image" accept="image/*"
-                                style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="padding: 14px;">Publish Listing</button>
-                    </form>
-                </div>
-
-                {% elif section == 'orders' %}
-                <div class="content-card">
-                    <div class="card-header">
-                        <h2>Sales History</h2>
                     </div>
-                    <table class="action-table">
-                        <thead>
-                            <tr>
-                                <th>Commodity</th>
-                                <th>Final Price</th>
-                                <th>Date Sold</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for order in orders %}
-                            <tr>
-                                <td>{{ order.commodity }}</td>
-                                <td>₹{{ order.current_highest_bid|default:order.base_price }}</td>
-                                <td>{{ order.end_time|date:"M d, Y" }}</td>
-                                <td><span style="color: #2e7d32; font-weight: 500;">Sold</span></td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" style="text-align: center; padding: 40px; color: #666;">
-                                    No completed sales yet. <a href="?section=add_listing"
-                                        style="color: var(--primary-green);">Create your first listing!</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
                 </div>
 
                 {% elif section == 'settings' %}
                 <div class="content-card">
                     <div class="card-header">
-                        <h2>Account Settings</h2>
+                        <h2>System & Admin Settings</h2>
                     </div>
-                    <form style="display: grid; gap: 20px;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <div class="form-group">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">First Name</label>
-                                <input type="text" value="{{ user.first_name }}"
-                                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                    <form style="display: grid; gap: 24px;">
+                        <div>
+                            <h4 style="margin-bottom: 12px; color: #333;">Profile Information</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Admin
+                                        User</label>
+                                    <input type="text" value="{{ user.username }}" disabled
+                                        style="width: 100%; padding: 12px; border: 1px solid #eee; background: #fafafa; border-radius: 8px;">
+                                </div>
+                                <div class="form-group">
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Security
+                                        Level</label>
+                                    <input type="text" value="SuperAdmin" disabled
+                                        style="width: 100%; padding: 12px; border: 1px solid #eee; background: #fafafa; border-radius: 8px;">
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Last Name</label>
-                                <input type="text" value="{{ user.last_name }}"
-                                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-                            </div>
                         </div>
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Email Address</label>
-                            <input type="email" value="{{ user.email }}" disabled
-                                style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 8px; background: #fafafa;">
-                        </div>
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Phone Number</label>
-                            <input type="text" value="{{ user.phone|default:'' }}"
-                                style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-                        </div>
-                        <button type="button" class="btn btn-primary" style="padding: 14px;">Update Profile</button>
+                        <hr style="border: 0; border-top: 1px solid #eee;">
+                        <button type="button" class="btn btn-primary" style="background: #dc2626; padding: 14px;">Update
+                            Admin Profile</button>
                     </form>
                 </div>
 
+
                 {% else %}
                 <div class="content-card" style="text-align: center; padding: 60px;">
-                    <i class="fas fa-tools"
-                        style="font-size: 48px; color: #ddd; margin-bottom: 20px; display: block;"></i>
-                    <h2>{{ section|title }} Section</h2>
-                    <p style="color: #666;">The <strong>{{ section|title }}</strong> feature is being fine-tuned for
-                        your experience.</p>
+                    <i class="fas fa-shield-alt"
+                        style="font-size: 48px; color: #eee; margin-bottom: 20px; display: block;"></i>
+                    <h2>{{ section|title }} Dashboard</h2>
+                    <p style="color: #666;">This administrative tool is currently being provisioned.</p>
                     <a href="?section=dashboard" class="btn btn-outline"
-                        style="margin-top: 20px; display: inline-block;">Back to Dashboard</a>
+                        style="margin-top: 20px; display: inline-block;">Back to Overview</a>
                 </div>
                 {% endif %}
             </main>
@@ -887,8 +829,8 @@
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
             <h3 class="modal-title">Delete Listing?</h3>
-            <p class="modal-text">Are you sure you want to delete this listing? This action is permanent and cannot be
-                undone.</p>
+            <p class="modal-text">Are you sure you want to delete this auction listing? This action is permanent and
+                cannot be undone.</p>
             <div class="modal-actions">
                 <button type="button" class="btn-modal-cancel" onclick="closeDeleteModal()">Cancel</button>
                 <button type="button" class="btn-modal-delete" id="confirmDeleteBtn">Yes, Delete</button>
@@ -898,49 +840,24 @@
 
     <script src="/assets/js/main.js?v=2"></script>
     <script src="/assets/js/script.js?v=2"></script>
+
     <script>
-        let targetListingId = null;
+        let targetFormId = null;
 
         function confirmDelete(listingId) {
-            targetListingId = listingId;
+            targetFormId = `delete-form-${listingId}`;
             const modal = document.getElementById('deleteModal');
             modal.style.display = 'flex';
         }
 
         function closeDeleteModal() {
             document.getElementById('deleteModal').style.display = 'none';
-            targetListingId = null;
+            targetFormId = null;
         }
 
         document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
-            if (targetListingId) {
-                // Create a form to submit the delete request
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `/listing/${targetListingId}/delete/`;
-
-                // Add CSRF token
-                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-                if (csrfToken) {
-                    const csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = 'csrfmiddlewaretoken';
-                    csrfInput.value = csrfToken.value;
-                    form.appendChild(csrfInput);
-                } else {
-                    // Try to get CSRF token from cookies as fallback
-                    const csrfCookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
-                    if (csrfCookie) {
-                        const csrfInput = document.createElement('input');
-                        csrfInput.type = 'hidden';
-                        csrfInput.name = 'csrfmiddlewaretoken';
-                        csrfInput.value = csrfCookie.split('=')[1];
-                        form.appendChild(csrfInput);
-                    }
-                }
-
-                document.body.appendChild(form);
-                form.submit();
+            if (targetFormId) {
+                document.getElementById(targetFormId).submit();
             }
         });
 
@@ -958,42 +875,94 @@
             }
         });
     </script>
-    <!-- Flatpickr JS -->
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script>
-        // Initialize Flatpickr
-        flatpickr("#listing_date", {
-            mode: "multiple",
-            dateFormat: "Y-m-d",
-            minDate: "today",
-            defaultDate: ["today"],
-            conjunction: ","
-        });
-    </script>
     <!-- Chatbot Container -->
-    <div id="chatbotFab" class="chatbot-fab role-seller">
-        <i class="fas fa-comment-dots"></i>
-    </div>
-
-    <div id="chatbotWindow" class="chatbot-window role-seller">
-        <div class="chat-header">
-            <div>
-                <h3 id="botName">Crop Bot</h3>
-                <span class="role-label" id="botRole">Listing Expert</span>
-            </div>
-            <i class="fas fa-times" style="cursor: pointer;" onclick="document.getElementById('chatbotWindow').style.display='none'"></i>
-        </div>
-        <div id="chatMessages" class="chat-messages"></div>
-        <div id="chatTyping" class="typing" style="padding: 0 20px;">Crop Bot is typing...</div>
-        <div class="chat-input-area">
-            <input type="text" id="chatInput" class="chat-input" placeholder="Ask me about listings...">
-            <button id="chatSend" class="chat-send">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
-    </div>
+    {% include 'includes/chatbot.html' %}
 
     <script src="/assets/js/chatbot.js?v=2"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('platformActivityChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: {{ graph_labels|safe }},
+                        datasets: [
+                            {
+                                label: 'Morning Sessions',
+                                data: {{ graph_morning|safe }},
+                                borderColor: '#dc2626',
+                                backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                borderWidth: 3,
+                                pointBackgroundColor: '#dc2626',
+                                pointRadius: 4
+                            },
+                            {
+                                label: 'Evening Sessions',
+                                data: {{ graph_evening|safe }},
+                                borderColor: '#1976d2',
+                                backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                borderWidth: 3,
+                                pointBackgroundColor: '#1976d2',
+                                pointRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                titleColor: '#111',
+                                bodyColor: '#666',
+                                borderColor: '#eee',
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y + ' Bids';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 5,
+                                    color: '#666',
+                                    font: { family: 'Outfit' }
+                                },
+                                grid: {
+                                    color: '#f0f0f0'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#666',
+                                    font: { family: 'Outfit' }
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>

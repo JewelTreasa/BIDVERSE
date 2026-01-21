@@ -11,7 +11,9 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="stylesheet" href="/assets/css/chatbot.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .dashboard-container {
             padding: 120px 0 60px;
@@ -411,7 +413,7 @@
     </style>
 </head>
 
-<body>
+<body data-user-role="ADMIN">
 
     <!-- Navigation -->
     <nav class="navbar">
@@ -870,6 +872,126 @@
         document.addEventListener('keydown', function (event) {
             if (event.key === "Escape") {
                 closeDeleteModal();
+            }
+        });
+    </script>
+    <!-- Chatbot Container -->
+    <div id="chatbotFab" class="chatbot-fab role-admin">
+        <i class="fas fa-comment-dots"></i>
+    </div>
+
+    <div id="chatbotWindow" class="chatbot-window role-admin">
+        <div class="chat-header">
+            <div>
+                <h3 id="botName">Shield Bot</h3>
+                <span class="role-label" id="botRole">System Monitor</span>
+            </div>
+            <i class="fas fa-times" style="cursor: pointer;" onclick="document.getElementById('chatbotWindow').style.display='none'"></i>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div id="chatTyping" class="typing" style="padding: 0 20px;">Shield Bot is typing...</div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Ask me about monitoring...">
+            <button id="chatSend" class="chat-send">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="/assets/js/chatbot.js?v=2"></script>
+    
+    <!-- Pass data to JS safely using json_script -->
+    {{ graph_labels|json_script:"graph_labels_data" }}
+    {{ graph_morning|json_script:"graph_morning_data" }}
+    {{ graph_evening|json_script:"graph_evening_data" }}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('platformActivityChart');
+            
+            // Parse data from JSON script tags
+            const labels = JSON.parse(document.getElementById('graph_labels_data').textContent);
+            const morningData = JSON.parse(document.getElementById('graph_morning_data').textContent);
+            const eveningData = JSON.parse(document.getElementById('graph_evening_data').textContent);
+
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Morning Sessions',
+                                data: morningData,
+                                borderColor: '#dc2626',
+                                backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                borderWidth: 3,
+                                pointBackgroundColor: '#dc2626',
+                                pointRadius: 4
+                            },
+                            {
+                                label: 'Evening Sessions',
+                                data: eveningData,
+                                borderColor: '#1976d2',
+                                backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                borderWidth: 3,
+                                pointBackgroundColor: '#1976d2',
+                                pointRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                titleColor: '#111',
+                                bodyColor: '#666',
+                                borderColor: '#eee',
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y + ' Bids';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 5,
+                                    color: '#666',
+                                    font: { family: 'Outfit' }
+                                },
+                                grid: {
+                                    color: '#f0f0f0'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#666',
+                                    font: { family: 'Outfit' }
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
             }
         });
     </script>

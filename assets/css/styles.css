@@ -186,6 +186,12 @@ img {
     padding: 0.5rem 0;
 }
 
+.navbar .container {
+    max-width: 100%;
+    padding-left: 3rem;
+    padding-right: 3rem;
+}
+
 .nav-container {
     display: grid;
     grid-template-columns: auto 1fr auto;
@@ -249,8 +255,8 @@ img {
 /* Navbar Navigation Links */
 .nav-links a {
     color: var(--text-dark);
-    font-weight: 500;
-    font-size: 1.1rem;
+    font-weight: 600;
+    font-size: 1.25rem;
     padding: 0.5rem;
     text-decoration: none;
 }

@@ -14,6 +14,21 @@ class User(AbstractUser):
     phone = models.CharField(max_length=15, unique=True, null=True, blank=True)
     user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='BUYER')
     is_verified = models.BooleanField(default=False)
+    
+    # New Address & Verification Fields
+    address = models.TextField(blank=True, help_text="Full address for delivery/pickup")
+    id_proof = models.FileField(upload_to='id_proofs/', blank=True, null=True, help_text="Upload ID proof for verification (Farmers only)")
+    
+    # Membership Fields
+    has_used_free_trial = models.BooleanField(default=False)
+    membership_expiry = models.DateTimeField(null=True, blank=True)
+    
+    MEMBERSHIP_CHOICES = (
+        ('TRIAL', 'Free Trial'),
+        ('MONTHLY', 'Monthly Plan'),
+        ('YEARLY', 'Yearly Plan'),
+    )
+    membership_type = models.CharField(max_length=10, choices=MEMBERSHIP_CHOICES, default='TRIAL', null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'phone']
@@ -211,4 +226,27 @@ class Notification(models.Model):
     def __str__(self):
         status = 'Read' if self.is_read else 'Unread'
         return f"{self.receiver.email} - {status}: {self.message[:30]}..."
+
+
+class Order(models.Model):
+    DELIVERY_CHOICES = (
+        ('PICKUP', 'Pickup from Farm'),
+        ('DELIVERY', 'Home Delivery'),
+    )
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('CONFIRMED', 'Confirmed'),
+        ('COMPLETED', 'Completed'),
+        ('CANCELLED', 'Cancelled'),
+    )
+
+    listing = models.OneToOneField(Listing, on_delete=models.CASCADE, related_name='order')
+    buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    delivery_method = models.CharField(max_length=10, choices=DELIVERY_CHOICES, default='PICKUP')
+    shipping_address = models.TextField(help_text="Address at time of order")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Order for {self.listing.commodity} by {self.buyer.email}"
 

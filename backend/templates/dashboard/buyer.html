@@ -568,10 +568,53 @@
                     </table>
                 </div>
 
-                {% elif section == 'won' or section == 'orders' %}
+                {% elif section == 'orders' %}
                 <div class="content-card">
                     <div class="card-header">
-                        <h2>{% if section == 'won' %}Won Auctions{% else %}Purchase History{% endif %}</h2>
+                        <h2>Purchase History</h2>
+                    </div>
+                    <table class="action-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Item</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr>
+                                <td>#{{ order.id }}</td>
+                                <td>{{ order.listing.commodity }}</td>
+                                <td>₹{{ order.listing.current_highest_bid }}</td>
+                                <td>{{ order.created_at|date:"M d, Y" }}</td>
+                                <td>
+                                    <span class="badge" style="background: #e0f2fe; color: #075985; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;">
+                                        {{ order.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'checkout_auction' order.listing.id %}" class="btn btn-sm btn-outline">View Order</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
+                                    No orders placed yet.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% elif section == 'won' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>Won Auctions</h2>
                     </div>
                     <table class="action-table">
                         <thead>
@@ -588,7 +631,13 @@
                                 <td>{{ listing.commodity }}</td>
                                 <td>₹{{ listing.current_highest_bid }}</td>
                                 <td>{{ listing.end_time|date:"M d, Y" }}</td>
-                                <td><span style="color: #2e7d32; font-weight: 500;">Won</span></td>
+                                <td>
+                                    {% if listing.has_order %}
+                                         <a href="{% url 'checkout_auction' listing.id %}" class="btn btn-sm btn-primary" style="padding: 5px 12px; font-size: 0.8rem;">View Order</a>
+                                    {% else %}
+                                         <a href="{% url 'checkout_auction' listing.id %}" class="btn btn-sm btn-success" style="padding: 5px 12px; font-size: 0.8rem;">Claim Now</a>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
@@ -684,7 +733,27 @@
     </style>
 
     <!-- Chatbot Container -->
-    {% include 'includes/chatbot.html' %}
+    <div id="chatbotFab" class="chatbot-fab role-buyer">
+        <i class="fas fa-comment-dots"></i>
+    </div>
+
+    <div id="chatbotWindow" class="chatbot-window role-buyer">
+        <div class="chat-header">
+            <div>
+                <h3 id="botName">Bid Bot</h3>
+                <span class="role-label" id="botRole">Bidding Assistant</span>
+            </div>
+            <i class="fas fa-times" style="cursor: pointer;" onclick="document.getElementById('chatbotWindow').style.display='none'"></i>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div id="chatTyping" class="typing" style="padding: 0 20px;">Bid Bot is typing...</div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Ask me about bidding...">
+            <button id="chatSend" class="chat-send">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="/assets/js/main.js?v=2"></script>

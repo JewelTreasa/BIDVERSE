@@ -6,7 +6,10 @@
 <div id="chatbotWindow" class="chatbot-window {% if not user.is_authenticated %}role-support{% elif user.user_type == 'BUYER' %}role-buyer{% elif user.user_type == 'FARMER' %}role-seller{% elif user.is_superuser %}role-admin{% endif %}">
     <div class="chat-header">
         <div>
-            <h3 id="botName">{% if not user.is_authenticated %}Support Bot{% elif user.user_type == 'BUYER' %}Bid Bot{% elif user.user_type == 'FARMER' %}Crop Bot{% else %}Shield Bot{% endif %}</h3>
+            <h3 id="botName" style="display: flex; align-items: center; gap: 8px;">
+                {% if not user.is_authenticated %}Support Bot{% elif user.user_type == 'BUYER' %}Bid Bot{% elif user.user_type == 'FARMER' %}Crop Bot{% else %}Shield Bot{% endif %}
+                <i class="fas fa-sync-alt" id="clearChat" title="Clear Chat" style="font-size: 14px; cursor: pointer; opacity: 0.7; transition: opacity 0.2s;"></i>
+            </h3>
             <span class="role-label" id="botRole">{% if not user.is_authenticated %}Platform Guide{% elif user.user_type == 'BUYER' %}Bidding Assistant{% elif user.user_type == 'FARMER' %}Listing Expert{% else %}System Monitor{% endif %}</span>
         </div>
         <i class="fas fa-times" style="cursor: pointer;" onclick="document.getElementById('chatbotWindow').style.display='none'"></i>

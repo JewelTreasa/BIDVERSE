@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .checkout-container {
+        max-width: 800px;
+        margin: 5rem auto;
+        padding: 0 20px;
+    }
+    
+    .checkout-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        padding: 40px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .item-preview {
+        display: flex;
+        gap: 20px;
+        background: #f8fafc;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .item-image {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .radio-option {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .radio-option:hover {
+        border-color: #cbd5e1;
+    }
+
+    .radio-option.selected {
+        border-color: #2e7d32;
+        background-color: #f0fdf4;
+    }
+
+    .radio-option input[type="radio"] {
+        margin-right: 15px;
+        accent-color: #2e7d32;
+        transform: scale(1.2);
+    }
+
+    .btn-submit {
+        width: 100%;
+        background-color: #2e7d32;
+        color: white;
+        padding: 16px;
+        border: none;
+        border-radius: 10px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: 20px;
+    }
+
+    .btn-submit:hover {
+        background-color: #1b5e20;
+    }
+</style>
+
+<div class="checkout-container">
+    <div class="checkout-card">
+        <h1 style="font-family: 'Playfair Display', serif; font-size: 2rem; margin-bottom: 30px;">Claim Your Reward</h1>
+        
+        <div class="item-preview">
+            <img src="{{ listing.display_image }}" alt="{{ listing.commodity }}" class="item-image">
+            <div>
+                <h3 style="margin: 0 0 5px 0;">{{ listing.commodity }}</h3>
+                <p class="text-muted" style="margin: 0;">Winning Bid: <strong style="color: #2e7d32;">₹{{ bid_amount }}</strong></p>
+                <p class="text-muted" style="margin: 0;">Seller: {{ listing.seller.get_full_name|default:listing.seller.email }}</p>
+            </div>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label">Choose Delivery Method</label>
+                
+                <label class="radio-option selected" onclick="selectOption(this)">
+                    <input type="radio" name="delivery_method" value="PICKUP" checked>
+                    <div>
+                        <strong style="display: block;">Pickup from Farm</strong>
+                        <span style="font-size: 0.9rem; color: #64748b;">Collect directly from the seller's location. Avoid delivery charges.</span>
+                        <div id="seller-address-box" style="margin-top: 10px; padding: 10px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid #2e7d32;">
+                            <strong style="font-size: 0.9rem; color: #1e293b;">Pickup Address:</strong>
+                            <p style="margin: 5px 0 0; font-size: 0.9rem; color: #475569;">
+                                {{ listing.seller.address|default:"Address not available. Please contact seller." }}
+                            </p>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="radio-option" onclick="selectOption(this)">
+                    <input type="radio" name="delivery_method" value="DELIVERY">
+                    <div>
+                        <strong style="display: block;">Home Delivery</strong>
+                        <span style="font-size: 0.9rem; color: #64748b;">We'll arrange transport to your address. Additional charges may apply.</span>
+                    </div>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Shipping / Billing Address</label>
+                <textarea name="shipping_address" required 
+                    style="width: 100%; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; min-height: 100px; font-family: inherit;">{{ user_address }}</textarea>
+                <small class="text-muted">Please ensure this address is correct for delivery or billing purposes.</small>
+            </div>
+
+            <button type="submit" class="btn-submit">Confirm Order</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function selectOption(element) {
+        // Remove selected class from all options
+        document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
+        // Add to clicked
+        element.classList.add('selected');
+        // Check ratio button
+        element.querySelector('input[type="radio"]').checked = true;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .success-card {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(46, 125, 50, 0.15);
+        border: 1px solid #e8f5e9;
+        overflow: hidden;
+        text-align: center;
+        padding: 3rem 2rem;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+    .icon-circle {
+        width: 100px;
+        height: 100px;
+        background: #dcfce7;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+    }
+    .check-icon {
+        color: #15803d;
+        font-size: 3rem;
+        animation: scaleUp 0.5s ease-out;
+    }
+    @keyframes scaleUp {
+        0% { transform: scale(0); opacity: 0; }
+        80% { transform: scale(1.1); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .success-title {
+        color: #166534;
+        font-family: 'Playfair Display', serif;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    .membership-detail {
+        background: #f0fdf4;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        text-align: left;
+    }
+</style>
+
+<div class="container py-5 mt-5">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="success-card fade-in-up">
+                <div class="icon-circle">
+                    <i class="fas fa-check check-icon"></i>
+                </div>
+                
+                <h2 class="display-6 success-title">Payment Successful!</h2>
+                <p class="text-muted mb-0">Thank you for your purchase.</p>
+
+                <div class="membership-detail">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-secondary">Plan Name</span>
+                        <span class="fw-bold text-dark">{{ plan_type|title }} Membership</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-secondary">Status</span>
+                        <span class="badge bg-success text-white rounded-pill px-3">Active</span>
+                    </div>
+                    {% if expiry %}
+                    <div class="d-flex justify-content-between">
+                        <span class="text-secondary">Valid Until</span>
+                        <span class="fw-bold text-dark">{{ expiry|date:"M d, Y" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="d-grid gap-3">
+                    <a href="{% url 'dashboard' %}" class="btn btn-success btn-lg rounded-pill shadow-sm fw-bold">
+                        Go to Dashboard <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                    <a href="{% url 'marketplace' %}" class="btn btn-outline-secondary rounded-pill fw-medium">
+                        Browse Marketplace
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Simple fade in animation for the card
+    document.addEventListener('DOMContentLoaded', function() {
+        const card = document.querySelector('.success-card');
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.6s ease-out';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100);
+    });
+</script>
+{% endblock %}

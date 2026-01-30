@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="/assets/css/styles.css">
     <link rel="stylesheet" href="/assets/css/chatbot.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Flatpickr CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
@@ -486,39 +487,71 @@
     <!-- Dashboard Content -->
     <section class="dashboard-container">
         <div class="container dashboard-grid">
-            <!-- Sidebar -->
-            <aside class="sidebar">
-                <div class="user-profile">
-                    <div class="user-avatar">
-                        <i class="fas fa-tractor"></i>
+            <!-- Sidebar Column Wrapper -->
+            <div class="dashboard-sidebar-col" style="display: flex; flex-direction: column; gap: 24px;">
+                <aside class="sidebar">
+                    <div class="user-profile">
+                        <div class="user-avatar">
+                            <i class="fas fa-tractor"></i>
+                        </div>
+                        <h3 class="user-name">{{ user.get_full_name|default:user.email }}</h3>
+                        <span class="user-role">FARMER (SELLER)</span>
                     </div>
-                    <h3 class="user-name">{{ user.get_full_name|default:user.email }}</h3>
-                    <span class="user-role">FARMER (SELLER)</span>
+                    <ul class="nav-menu">
+                        <li class="nav-item"><a href="?section=dashboard"
+                                class="nav-link {% if section == 'dashboard' or not section %}active{% endif %}"><i
+                                    class="fas fa-th-large"></i>
+                                Dashboard</a></li>
+                        <li class="nav-item"><a href="?section=listings"
+                                class="nav-link {% if section == 'listings' %}active{% endif %}"><i class="fas fa-list"></i>
+                                My Listings</a></li>
+                        <li class="nav-item"><a href="?section=add_listing"
+                                class="nav-link {% if section == 'add_listing' %}active{% endif %}"><i
+                                    class="fas fa-plus-circle"></i> Add Listed</a>
+                        </li>
+                        <li class="nav-item"><a href="?section=sales"
+                                class="nav-link {% if section == 'sales' %}active{% endif %}"><i
+                                    class="fas fa-chart-line"></i> Sales
+                                History</a></li>
+                        <li class="nav-item"><a href="?section=unclaimed"
+                                class="nav-link {% if section == 'unclaimed' %}active{% endif %}"><i
+                                    class="fas fa-clock"></i> Pending Claims</a></li>
+                        <li class="nav-item"><a href="?section=payments"
+                                class="nav-link {% if section == 'payments' %}active{% endif %}"><i
+                                    class="fas fa-wallet"></i> Payments</a></li>
+                        <li class="nav-item"><a href="?section=settings"
+                                class="nav-link {% if section == 'settings' %}active{% endif %}"><i class="fas fa-cog"></i>
+                                Settings</a></li>
+                    </ul>
+                </aside>
+
+                <!-- Membership Card -->
+                <div class="sidebar" style="text-align: center; background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%); border: 1px solid #fde047;">
+                    <div style="width: 50px; height: 50px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: #854d0e; font-size: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    {% if user.membership_type == 'TRIAL' and user.membership_expiry.year > 2025 %}
+                         <h4 style="font-size: 16px; font-weight: 700; color: #854d0e; margin-bottom: 4px;">Premium Member</h4>
+                    {% else %}
+                         <h4 style="font-size: 16px; font-weight: 700; color: #854d0e; margin-bottom: 4px;">{{ user.get_membership_type_display|default:"Free Trial" }}</h4>
+                    {% endif %}
+                    
+                    <p style="font-size: 12px; color: #854d0e; margin-bottom: 16px;">
+                        {% if user.membership_expiry %}
+                        Valid until {{ user.membership_expiry|date:"M d, Y" }}
+                        {% else %}
+                        Enjoying your first free login!
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'membership_plans' %}" class="btn btn-sm w-100" style="background: #a16207; color: white; border-radius: 20px; font-weight: 600;">
+                        {% if user.membership_type == 'YEARLY' %}
+                        Manage Plan
+                        {% else %}
+                        Upgrade Plan <i class="fas fa-arrow-up ms-1"></i>
+                        {% endif %}
+                    </a>
                 </div>
-                <ul class="nav-menu">
-                    <li class="nav-item"><a href="?section=dashboard"
-                            class="nav-link {% if section == 'dashboard' or not section %}active{% endif %}"><i
-                                class="fas fa-th-large"></i>
-                            Dashboard</a></li>
-                    <li class="nav-item"><a href="?section=listings"
-                            class="nav-link {% if section == 'listings' %}active{% endif %}"><i class="fas fa-list"></i>
-                            My Listings</a></li>
-                    <li class="nav-item"><a href="?section=add_listing"
-                            class="nav-link {% if section == 'add_listing' %}active{% endif %}"><i
-                                class="fas fa-plus-circle"></i> Add Listed</a>
-                    </li>
-                    <li class="nav-item"><a href="?section=sales"
-                            class="nav-link {% if section == 'sales' %}active{% endif %}"><i
-                                class="fas fa-chart-line"></i> Sales
-                            History</a></li>
-                    <li class="nav-item"><a href="?section=payments"
-                            class="nav-link {% if section == 'payments' %}active{% endif %}"><i
-                                class="fas fa-wallet"></i> Payments</a></li>
-                    <li class="nav-item"><a href="?section=settings"
-                            class="nav-link {% if section == 'settings' %}active{% endif %}"><i class="fas fa-cog"></i>
-                            Settings</a></li>
-                </ul>
-            </aside>
+            </div>
 
             <!-- Main Content -->
             <main class="main-content">
@@ -544,6 +577,26 @@
                             <h3>₹{{ total_revenue|default:"0" }}</h3>
                             <p>Total Revenue</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Listing Activity Graph -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>Listing Activity</h2>
+                        <div style="display: flex; gap: 15px; font-size: 14px;">
+                            <span style="display: flex; align-items: center; gap: 6px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; background: #166534; border-radius: 2px;"></span>
+                                Morning
+                            </span>
+                            <span style="display: flex; align-items: center; gap: 6px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; background: #84cc16; border-radius: 2px;"></span>
+                                Evening
+                            </span>
+                        </div>
+                    </div>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="listingChart"></canvas>
                     </div>
                 </div>
 
@@ -799,7 +852,62 @@
                     </form>
                 </div>
 
-                {% elif section == 'orders' %}
+                {% elif section == 'unclaimed' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>Pending Claims</h2>
+                        <span class="badge" style="background: #fff7ed; color: #c2410c; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;">
+                            Action Needed by Buyers
+                        </span>
+                    </div>
+                    <table class="action-table">
+                        <thead>
+                            <tr>
+                                <th>Listing</th>
+                                <th>Winner</th>
+                                <th>Winning Bid</th>
+                                <th>Ended On</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for listing in unclaimed_listings %}
+                            <tr>
+                                <td>{{ listing.commodity }}</td>
+                                <td>
+                                    {% with winner=listing.bids.last.buyer %}
+                                        <strong>{{ winner.get_full_name|default:winner.email }}</strong><br>
+                                        <span style="font-size: 0.8rem; color: #666;">{{ winner.phone|default:"-" }}</span>
+                                    {% endwith %}
+                                </td>
+                                <td>₹{{ listing.current_highest_bid }}</td>
+                                <td>{{ listing.end_time|date:"M d, Y" }}</td>
+                                <td>
+                                    <span class="badge" style="background: #fef2f2; color: #dc2626; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;">
+                                        Not Claimed
+                                    </span>
+                                </td>
+                                <td>
+                                    {% with winner=listing.bids.last.buyer %}
+                                    <a href="mailto:{{ winner.email }}" class="btn btn-sm btn-outline" style="font-size: 0.75rem;">
+                                        <i class="fas fa-envelope"></i> Remind
+                                    </a>
+                                    {% endwith %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
+                                    All sold items have been claimed!
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% elif section == 'sales' %}
                 <div class="content-card">
                     <div class="card-header">
                         <h2>Sales History</h2>
@@ -807,23 +915,50 @@
                     <table class="action-table">
                         <thead>
                             <tr>
-                                <th>Commodity</th>
-                                <th>Final Price</th>
-                                <th>Date Sold</th>
+                                <th>Order ID</th>
+                                <th>Item</th>
+                                <th>Buyer</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Shipping/Pickup Details</th>
                                 <th>Status</th>
+                                <th>Date</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for order in orders %}
                             <tr>
-                                <td>{{ order.commodity }}</td>
-                                <td>₹{{ order.current_highest_bid|default:order.base_price }}</td>
-                                <td>{{ order.end_time|date:"M d, Y" }}</td>
-                                <td><span style="color: #2e7d32; font-weight: 500;">Sold</span></td>
+                                <td>#{{ order.id }}</td>
+                                <td>{{ order.listing.commodity }}</td>
+                                <td>
+                                    <strong>{{ order.buyer.get_full_name|default:order.buyer.email }}</strong><br>
+                                    <span style="font-size: 0.8rem; color: #666;">{{ order.buyer.phone|default:"-" }}</span>
+                                </td>
+                                <td>₹{{ order.listing.current_highest_bid }}</td>
+                                <td>
+                                    {% if order.delivery_method == 'PICKUP' %}
+                                    <span class="badge" style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Pickup from Farm</span>
+                                    {% else %}
+                                    <span class="badge" style="background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Home Delivery</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.delivery_method == 'DELIVERY' %}
+                                        <div style="font-size: 0.85rem; max-width: 200px; color: #333;">{{ order.shipping_address }}</div>
+                                    {% else %}
+                                        <span style="color: #666; font-size: 0.85rem;">Buyer will collect</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge" style="background: #f3f4f6; color: #374151; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;">
+                                        {{ order.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ order.created_at|date:"M d, Y" }}</td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" style="text-align: center; padding: 40px; color: #666;">
+                                <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
                                     No completed sales yet. <a href="?section=add_listing"
                                         style="color: var(--primary-green);">Create your first listing!</a>
                                 </td>
@@ -974,6 +1109,68 @@
     {% include 'includes/chatbot.html' %}
 
     <script src="/assets/js/chatbot.js?v=2"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('listingChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: {{ graph_labels|safe }},
+                        datasets: [
+                            {
+                                label: 'Morning Session',
+                                data: {{ graph_morning|safe }},
+                                backgroundColor: '#166534',
+                                borderRadius: 4,
+                            },
+                            {
+                                label: 'Evening Session',
+                                data: {{ graph_evening|safe }},
+                                backgroundColor: '#84cc16',
+                                borderRadius: 4,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1,
+                                    color: '#666',
+                                    font: { family: 'Outfit' }
+                                },
+                                grid: {
+                                    color: '#f0f0f0'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#666',
+                                    font: { family: 'Outfit' }
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>

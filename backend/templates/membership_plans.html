@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5 pb-4" style="margin-top: 3rem;"> <!-- Added margin-top to move header down -->
+        <h1 class="display-4 fw-bold mb-3" style="color: var(--primary-green); font-family: 'Playfair Display', serif;">Choose Your Plan</h1>
+        <p class="lead text-muted" style="font-family: 'Outfit', sans-serif;">Unlock unlimited access to auctions, detailed listings, and premium features.</p>
+    </div>
+
+    <!-- Pricing Grid -->
+    <div class="pricing-grid" style="margin-top: 5rem; margin-bottom: 5rem;"> <!-- Increased margins to prevent overlap -->
+        
+        <!-- Free Trial (Used/Expired) -->
+        <div class="pricing-card expired">
+            <div class="card-header">
+                <h4 class="plan-name">Free Trial</h4>
+            </div>
+            <div class="card-body">
+                <div class="price-container">
+                    <span class="currency">₹</span>
+                    <span class="amount">0</span>
+                    <span class="period">/mo</span>
+                </div>
+                <div class="features-list">
+                    <div class="feature-item"><i class="fas fa-check"></i> <span>One-time Access</span></div>
+                    <div class="feature-item"><i class="fas fa-check"></i> <span>Explore Auctions</span></div>
+                    <div class="feature-item"><i class="fas fa-check"></i> <span>Place Bids (Limited)</span></div>
+                    <div class="feature-item"><i class="fas fa-clock"></i> <span>Valid for 1 Session</span></div>
+                </div>
+                <button type="button" class="btn btn-outline-secondary w-100 mt-4" disabled>
+                    <i class="fas fa-lock me-2"></i> Used / Expired
+                </button>
+                <p class="text-danger mt-3 small mb-0"><i class="fas fa-exclamation-circle me-1"></i> You have used your free trial.</p>
+            </div>
+        </div>
+
+        <!-- Monthly Plan -->
+        <div class="pricing-card popular">
+            <div class="popular-badge">POPULAR</div>
+            <div class="card-header">
+                <h4 class="plan-name text-highlight">Monthly</h4>
+            </div>
+            <div class="card-body">
+                <div class="price-container">
+                    <span class="currency">₹</span>
+                    <span class="amount">499</span>
+                    <span class="period">/mo</span>
+                </div>
+                <div class="features-list">
+                    {% if user.user_type == 'FARMER' %}
+                        <!-- Farmer Features -->
+                        <div class="feature-item"><i class="fas fa-check-circle text-success"></i> <span>Unlimited Product Listings</span></div>
+                        <div class="feature-item"><i class="fas fa-check-circle text-success"></i> <span>0% Commission (First 5 Sales)</span></div>
+                        <div class="feature-item"><i class="fas fa-check-circle text-success"></i> <span>Priority Verification</span></div>
+                        <div class="feature-item"><i class="fas fa-check-circle text-success"></i> <span>Advanced Sales Reports</span></div>
+                    {% else %}
+                        <!-- Buyer Features -->
+                        <div class="feature-item"><i class="fas fa-check-circle text-success"></i> <span>Unlimited Auction Access</span></div>
+                        <div class="feature-item"><i class="fas fa-check-circle text-success"></i> <span>Unlimited Bidding</span></div>
+                        <div class="feature-item"><i class="fas fa-check-circle text-success"></i> <span>Priority Support</span></div>
+                        <div class="feature-item"><i class="fas fa-check-circle text-success"></i> <span>Market Analytics</span></div>
+                    {% endif %}
+                </div>
+                <a href="{% url 'purchase_membership' 'monthly' %}" class="btn btn-primary btn-lg w-100 mt-4 shadow-sm">
+                    Get Started
+                </a>
+            </div>
+        </div>
+
+        <!-- Yearly Plan -->
+        <div class="pricing-card best-value">
+            <div class="card-header">
+                <h4 class="plan-name">Yearly</h4>
+            </div>
+            <div class="card-body">
+                <div class="price-container">
+                    <span class="currency">₹</span>
+                    <span class="amount">4999</span>
+                    <span class="period">/yr</span>
+                </div>
+                <div class="features-list">
+                    {% if user.user_type == 'FARMER' %}
+                        <!-- Farmer Features -->
+                        <div class="feature-item"><i class="fas fa-star text-warning"></i> <span>Save ₹1000/year</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i> <span>Zero Platform Fees</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i> <span>Featured Listings (Top Search)</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i> <span>Dedicated Account Manager</span></div>
+                    {% else %}
+                        <!-- Buyer Features -->
+                        <div class="feature-item"><i class="fas fa-star text-warning"></i> <span>Save ₹1000/year</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i> <span>All Monthly Features</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i> <span>Early Access to Auctions</span></div>
+                        <div class="feature-item"><i class="fas fa-check"></i> <span>Ded. Account Manager</span></div>
+                    {% endif %}
+                </div>
+                <a href="{% url 'purchase_membership' 'yearly' %}" class="btn btn-lg w-100 mt-4" style="background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%); color: #111 !important; border: none; box-shadow: 0 4px 15px rgba(253, 185, 49, 0.4); font-weight: 700;">
+                    Best Value
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Trust Badges Removed -->
+</div>
+
+<style>
+    /* Scoped Styles for Professional Look */
+    .font-heading { font-family: 'Playfair Display', serif; }
+    
+    .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 2rem;
+        max-width: 1100px;
+        margin: 0 auto;
+        align-items: stretch; /* Stretch cards to equal height */
+    }
+
+    .pricing-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+        border: 1px solid #e5e7eb;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        height: 100%; /* Full height */
+    }
+
+    .pricing-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+    }
+
+    .pricing-card.popular {
+        border: 2px solid var(--primary-green);
+        box-shadow: 0 15px 30px rgba(46, 125, 50, 0.15);
+        /* Removed scale for perfect alignment */
+        z-index: 2;
+    }
+    
+    .pricing-card.best-value {
+        border: 2px solid #FFD700;
+        box-shadow: 0 15px 30px rgba(253, 185, 49, 0.15);
+        z-index: 2;
+    }
+
+    .pricing-card.popular:hover {
+         transform: translateY(-8px);
+    }
+
+    .pricing-card.expired {
+        opacity: 0.7;
+        background-color: #fafafa;
+    }
+
+    .popular-badge {
+        position: absolute;
+        top: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--primary-green);
+        color: white;
+        padding: 6px 16px;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        box-shadow: 0 4px 10px rgba(46, 125, 50, 0.3);
+    }
+    
+    /* Gold styling for Yearly Plan features */
+    .pricing-card.best-value .feature-item {
+        background-color: #FEF9C3;
+        border-color: #FDE047;
+        color: #854D0E;
+    }
+    .pricing-card.best-value .feature-item i {
+        color: #CA8A04;
+    }
+    
+    /* ... (rest of styles) ... */
+    
+    /* Update this part in the original file to match context if needed, but for now I'm replacing the button and the css block */
+    
+    .plan-name {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.75rem;
+        margin-bottom: 0;
+        font-weight: 700;
+    }
+
+    .card-header {
+        background: transparent;
+        border: none;
+        padding-bottom: 0.5rem;
+    }
+    
+    .card-body {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1; /* Allow body to grow */
+        padding: 0;
+    }
+
+    .price-container {
+        display: flex;
+        justify-content: center;
+        align-items: baseline;
+        margin-bottom: 1rem;
+        color: var(--text-dark);
+    }
+
+    .currency {
+        font-size: 1.5rem;
+        font-weight: 500;
+        margin-right: 4px;
+        position: relative;
+        top: -10px;
+        font-family: sans-serif;
+    }
+
+    .amount {
+        font-size: 3.2rem;
+        font-weight: 800;
+        line-height: 1;
+        font-family: 'Playfair Display', serif;
+    }
+
+    .period {
+        font-size: 1.1rem;
+        color: #6b7280;
+        font-weight: 500;
+        margin-left: 4px;
+    }
+
+    .features-list {
+        /* text-align: center;  <-- REMOVED to let items align naturally */
+        margin: 0 auto 1rem auto;
+        flex-grow: 1;
+        width: fit-content; /* Center the block of items */
+        padding: 0; /* Remove padding that shifts center */
+    }
+
+    .feature-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem; /* Slightly smaller font */
+        color: #4b5563;
+        font-family: 'Outfit', sans-serif;
+        line-height: 1.4;
+        background-color: #f8f9fa; /* Light background for 'block' feel */
+        padding: 0.6rem 0.9rem;
+        border-radius: 8px; /* Rounded corners */
+        border: 1px solid #edf2f7;
+    }
+
+    .feature-item i {
+        width: 20px; 
+        margin-right: 12px;
+        text-align: center;
+        flex-shrink: 0;
+        color: var(--primary-green); /* Ensure icon pop */
+    }
+    
+    .btn-lg {
+        margin-top: auto; 
+        font-size: 1rem; /* Adjust button size */
+        padding: 0.75rem 1.5rem;
+    }
+
+    /* Adjust Card Padding for 'Small' feel */
+    .pricing-card {
+        padding: 2.5rem 1.5rem;
+    }
+    
+    /* Subtle pop for popular card, but keep alignment strict */
+    .pricing-card.popular {
+        /* transform: scale(1.02);  <-- REMOVED */
+        border: 2px solid var(--primary-green);
+        z-index: 10;
+        box-shadow: 0 20px 40px rgba(46, 125, 50, 0.15);
+    }
+
+    /* On simpler screens, remove scale to ensure perfect grid functionality */
+    @media (max-width: 992px) {
+        .pricing-card.popular {
+            transform: none;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+{% endblock %}

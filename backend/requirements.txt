@@ -7,3 +7,4 @@ python-dotenv
 requests
 google-auth
 social-auth-app-django
+razorpay

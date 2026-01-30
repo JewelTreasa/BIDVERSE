@@ -588,7 +588,13 @@
                                 <td>{{ listing.commodity }}</td>
                                 <td>₹{{ listing.current_highest_bid }}</td>
                                 <td>{{ listing.end_time|date:"M d, Y" }}</td>
-                                <td><span style="color: #2e7d32; font-weight: 500;">Won</span></td>
+                                <td>
+                                    {% if listing.has_order %}
+                                         <a href="{% url 'checkout_auction' listing.id %}" class="btn btn-sm btn-primary" style="padding: 5px 12px; font-size: 0.8rem;">View Order</a>
+                                    {% else %}
+                                         <a href="{% url 'checkout_auction' listing.id %}" class="btn btn-sm btn-success" style="padding: 5px 12px; font-size: 0.8rem;">Claim Now</a>
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>

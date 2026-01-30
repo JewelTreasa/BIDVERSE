@@ -24,7 +24,13 @@ urlpatterns = [
     path('listing/<int:listing_id>/notify/', account_views.toggle_notification, name='toggle_notification'),
     path('notifications/', account_views.notifications, name='notifications'),
     path('notifications/mark/<int:notif_id>/', account_views.mark_notification_read, name='mark_notification_read'),
+    path('chatbot/message/', account_views.chatbot_response, name='chatbot_message'),
     path('admin/send-notification/', account_views.send_notification, name='send_notification'),
+
+    # Membership
+    path('membership/', account_views.membership_plans, name='membership_plans'),
+    path('membership/purchase/<str:plan_type>/', account_views.purchase_membership, name='purchase_membership'),
+    path('membership/success/', account_views.payment_success, name='payment_success'),
 
     # Web form views (outside of API namespace)
     path('login/', account_views.login_user, name='login'),

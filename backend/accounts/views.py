@@ -30,8 +30,34 @@ from .utils import (
     MORNING_START, MORNING_END, EVENING_START, EVENING_END, BREAK_START, BREAK_END
 )
 
-# Removed moved functions (get_current_session_info, calculate_listing_end_time, send_auction_notifications, auto_end_expired_auctions)
 # Logic is now in utils.py to support background tasks
+
+def membership_required(view_func):
+    """
+    Decorator to ensure User has active membership or valid free trial session.
+    Applies only to BUYER and FARMER roles.
+    """
+    from functools import wraps
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if request.user.is_authenticated:
+            user = request.user
+            user_type_upper = user.user_type.upper() if user.user_type else ''
+            
+            if user_type_upper in ['BUYER', 'FARMER']:
+                # 1. Check Active Membership
+                has_active = user.membership_expiry and user.membership_expiry > timezone.now()
+                
+                # 2. Check Valid Free Trial Session
+                is_trial_session = request.session.get('is_free_trial_session', False)
+                
+                if not has_active and not is_trial_session:
+                    # BLOCK ACCESS
+                    messages.warning(request, "Membership required to access this feature.")
+                    return redirect('membership_plans')
+                    
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
 def home(request):
     """Home page view showing latest auctions for current session"""
@@ -84,6 +110,7 @@ def privacy_policy(request):
 def help_center(request):
     return render(request, 'help.html')
 
+@membership_required
 def marketplace(request):
     """View all active auctions with session-based filtering"""
     # Auto-end expired auctions
@@ -152,6 +179,7 @@ def marketplace(request):
         'session_info': session_info
     })
 
+@membership_required
 def auction_detail(request, listing_id):
     """View details of a specific auction"""
     listing = get_object_or_404(Listing, id=listing_id)
@@ -213,6 +241,7 @@ def toggle_notification(request, listing_id):
     return JsonResponse({'subscribed': subscribed})
 
 @login_required
+@membership_required
 def place_bid(request, listing_id):
     """Process a new bid"""
     if request.user.user_type != 'BUYER':
@@ -253,7 +282,6 @@ def place_bid(request, listing_id):
     listing.current_highest_bid = bid_amount
     listing.save()
     
-    messages.success(request, f"Successfully placed bid of ₹{bid_amount}!")
     return redirect('auction_detail', listing_id=listing_id)
 
 class RegisterAPIView(generics.GenericAPIView):
@@ -469,6 +497,32 @@ def login_user(request):
         if user is not None:
             print(f"Authentication successful for user: {user.email}")
             login(request, user)
+            
+            # MEMBERSHIP & FREE TRIAL LOGIC
+            user_type_upper = user.user_type.upper() if user.user_type else ''
+            if user_type_upper in ['BUYER', 'FARMER']:
+                # 1. Check if they have an active membership
+                has_active_membership = False
+                if user.membership_expiry and user.membership_expiry > timezone.now():
+                    has_active_membership = True
+                
+                # 2. If no membership, check trial status
+                if not has_active_membership:
+                    if not user.has_used_free_trial:
+                        # First time login!
+                        # Mark trial as used (so next time they must pay)
+                        user.has_used_free_trial = True
+                        user.save()
+                        
+                        # Set session variable for immediate access
+                        request.session['is_free_trial_session'] = True
+                        
+                        messages.success(request, "Welcome! You are using your one-time Free Trial session.")
+                    else:
+                        # Trial used AND no membership -> Redirect to Plans
+                        messages.warning(request, "Your free trial has ended. Please purchase a membership to continue.")
+                        return redirect('membership_plans')
+
             print("Redirecting to home...")
             return redirect("home")
         else:
@@ -575,7 +629,8 @@ def register_user(request):
         fullname = request.POST.get("fullname")
         phone = request.POST.get("phone")
         usertype = request.POST.get("usertype")
-
+        address = request.POST.get("address")
+        
         # Basic validation
         if not email or not password:
             return render(request, "register.html", {"error": "Email and password are required"})
@@ -602,16 +657,72 @@ def register_user(request):
 
         if phone:
             user.phone = phone
+        
+        if address:
+            user.address = address
 
         if usertype:
-            user.user_type = usertype.upper()
+            user_role = usertype.upper()
+            user.user_type = user_role
+            
+            # Handle ID Proof for Farmers
+            if user_role == 'FARMER':
+                if 'id_proof' in request.FILES:
+                    user.id_proof = request.FILES['id_proof']
+                # Farmers are unverified by default until ID check
+                user.is_verified = False
+            else:
+                # Buyers are verified by default for now (or email verification logic separately)
+                user.is_verified = True
 
         user.set_password(password)
-        user.full_clean()  # Validate before saving
-        user.save()
-        return redirect("/login/")
+        try:
+            user.full_clean()  # Validate before saving
+            user.save()
+            return redirect("/login/")
+        except Exception as e:
+             return render(request, "register.html", {"error": str(e)})
 
     return render(request, "register.html")
+
+
+from .models import Order
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def checkout_auction(request, listing_id):
+    listing = get_object_or_404(Listing, id=listing_id)
+    
+    # Ensure current user is the winner
+    highest_bid = listing.bids.order_by('-amount').first()
+    if not highest_bid or highest_bid.buyer != request.user:
+        return redirect('dashboard')
+        
+    # Check if order already exists
+    if hasattr(listing, 'order'):
+         return render(request, 'order_summary.html', {'order': listing.order})
+    
+    if request.method == 'POST':
+        delivery_method = request.POST.get('delivery_method')
+        shipping_address = request.POST.get('shipping_address')
+        
+        # Create Order
+        order = Order.objects.create(
+            listing=listing,
+            buyer=request.user,
+            delivery_method=delivery_method,
+            shipping_address=shipping_address,
+            status='CONFIRMED' # Auto-confirm for now as per flow
+        )
+        # Redirect to the same view to show summary now
+        return redirect('checkout_auction', listing_id=listing.id)
+
+    return render(request, 'checkout_auction.html', {
+        'listing': listing,
+        'bid_amount': highest_bid.amount,
+        'user_address': request.user.address
+    })
 
 def check_auth(request):
     """Check authentication status for frontend"""
@@ -634,6 +745,28 @@ def check_auth(request):
 @login_required
 def dashboard(request):
     """User dashboard view - routes to specialized templates based on user_type"""
+    
+    # Robust Membership Check
+    user = request.user
+    user_type_upper = user.user_type.upper() if user.user_type else ''
+    if user_type_upper in ['BUYER', 'FARMER']:
+        has_active = user.membership_expiry and user.membership_expiry > timezone.now()
+        is_trial_session = request.session.get('is_free_trial_session', False)
+        
+        # Logic: 
+        # 1. If active membership: OK
+        # 2. If NO membership:
+        #    - If in valid trial session (session var set): OK
+        #    - Else: BLOCK (Redirect to Plans)
+        
+        if not has_active and not is_trial_session:
+            # Check edge case: Maybe they JUST used the trial but session var lost? 
+            # (Unlikely in same session used by login, but covers 'Next Time')
+            
+            # Message and Redirect
+            messages.warning(request, "Membership required. Your free trial has ended.")
+            return redirect('membership_plans')
+
     # Auto-end expired auctions
     auto_end_expired_auctions()
 
@@ -737,13 +870,47 @@ def dashboard(request):
                     listings = [l for l in listings if l.start_time > now]
             
             context['listings'] = listings
-        elif section == 'orders':
+        elif section == 'orders' or section == 'sales':
             # Sold items for farmer
-            context['orders'] = Listing.objects.filter(seller=request.user, is_active=False).order_by('-end_time')
+            # Filter Orders where the listing's seller is the specific user
+            context['orders'] = Order.objects.filter(listing__seller=request.user).order_by('-created_at')
+        elif section == 'unclaimed':
+            # Sold but not claimed (no Order object)
+            # Must be inactive, have a bid (winner), and no associated order
+            context['unclaimed_listings'] = Listing.objects.filter(
+                seller=request.user, 
+                is_active=False, 
+                order__isnull=True,
+                current_highest_bid__isnull=False
+            ).order_by('-end_time')
         elif section == 'dashboard':
             context['active_listings_count'] = Listing.objects.filter(seller=request.user, is_active=True).count()
-            context['sold_count'] = Listing.objects.filter(seller=request.user, is_active=False).count()
+            context['items_sold'] = Listing.objects.filter(seller=request.user, is_active=False).count()
+            context['total_revenue'] = sum(l.current_highest_bid for l in Listing.objects.filter(seller=request.user, is_active=False) if l.current_highest_bid)
             context['live_listings'] = Listing.objects.filter(seller=request.user, is_active=True).order_by('-created_at')[:5]
+            
+            # Graph Data for Farmer: Last 7 days listings created
+            days = []
+            morning_counts = []
+            evening_counts = []
+            farmer_listings = Listing.objects.filter(seller=request.user)
+            
+            for i in range(6, -1, -1):
+                date = (timezone.now() - timedelta(days=i)).date()
+                days.append(date.strftime('%b %d'))
+                
+                # Filter listings created on this day
+                day_listings = farmer_listings.filter(created_at__date=date)
+                
+                m_count = day_listings.filter(morning_session=True).count()
+                e_count = day_listings.filter(evening_session=True).count()
+                
+                morning_counts.append(m_count)
+                evening_counts.append(e_count)
+            
+            context['graph_labels'] = days
+            context['graph_morning'] = morning_counts
+            context['graph_evening'] = evening_counts
         
         return render(request, "dashboard/seller.html", context)
         
@@ -753,14 +920,24 @@ def dashboard(request):
         if section == 'bids':
             context['bids'] = user_bids.order_by('-timestamp')
         elif section == 'won':
-            # Simplified logic: listings where user has a bid and is_active=False
-            # and their bid is >= current_highest_bid (which is usually their own)
-            context['won_listings'] = Listing.objects.filter(
+            # Correct logic: Valid winners only
+            candidates = Listing.objects.filter(
                 is_active=False,
                 bids__buyer=request.user
             ).distinct().order_by('-end_time')
+            
+            won_items = []
+            for l in candidates:
+                # Check if highest bid belongs to current user
+                highest = l.bids.order_by('-amount', 'timestamp').first()
+                if highest and highest.buyer == request.user:
+                    # Check if order exists (using OneToOne reverse relation check)
+                    l.has_order = Order.objects.filter(listing=l).exists()
+                    won_items.append(l)
+            
+            context['won_listings'] = won_items
         elif section == 'orders':
-            context['orders'] = context.get('won_listings', Listing.objects.filter(is_active=False, bids__buyer=request.user).distinct())
+            context['orders'] = Order.objects.filter(buyer=request.user).order_by('-created_at')
         elif section == 'dashboard':
             context['active_bids_count'] = user_bids.filter(listing__is_active=True).values('listing').distinct().count()
             context['won_auctions_count'] = Listing.objects.filter(is_active=False, bids__buyer=request.user).distinct().count()
@@ -935,17 +1112,12 @@ def delete_listing(request, listing_id):
 # New: Buyer notifications view (JSON)
 @login_required
 def notifications(request):
-    if request.user.user_type != 'BUYER':
-        return JsonResponse({'error': 'Only buyers can view notifications.'}, status=403)
     notifs = request.user.notifications.order_by('-created_at').values('id', 'message', 'created_at', 'is_read')
     return JsonResponse(list(notifs), safe=False)
 
 # Mark a notification as read
 @login_required
 def mark_notification_read(request, notif_id):
-    if request.user.user_type != 'BUYER':
-        return JsonResponse({'error': 'Only buyers can modify notifications.'}, status=403)
-    
     # Use filter().update() for efficiency and to avoid 404 if already deleted/read issues happen
     updated = Notification.objects.filter(id=notif_id, receiver=request.user).update(is_read=True)
     
@@ -988,3 +1160,176 @@ def send_notification(request):
         return redirect(reverse('dashboard') + '?section=notifications')
     
     return redirect('dashboard')
+
+@login_required
+def membership_plans(request):
+    """View to show membership plans"""
+    return render(request, 'membership_plans.html')
+
+import razorpay
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+
+@login_required
+def purchase_membership(request, plan_type):
+    """Create Razorpay Order and Render Checkout (Handles Mock Mode)"""
+    user = request.user
+    
+    # Determine Amount (in Rupees)
+    if plan_type == 'yearly':
+        amount = 4999
+    else:
+        amount = 499
+        
+    amount_paise = amount * 100 # Razorpay takes amount in paise
+    
+    # Create Razorpay Client
+    # NOTE: If keys are invalid/placeholder, this client creation works, but order.create will fail or client-side checkout will fail.
+    # We allow this to proceed so the user sees the 'Real' integration attempt.
+    
+    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
+         messages.error(request, "Razorpay Keys are missing in .env! Please add them.")
+         return redirect('membership_plans')
+
+    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+    
+    # Create Order
+    try:
+        data = {"amount": amount_paise, "currency": "INR", "payment_capture": "1"}
+        payment = client.order.create(data=data)
+        print(f"SUCCESS: Razorpay Order Created! ID: {payment['id']}")
+    except Exception as e:
+        print(f"Razorpay Error: {e}")
+        # If order creation fails (e.g. invalid keys), we can't show checkout.
+        messages.error(request, f"Payment Gateway Error: Invalid API Key or Network Issue. (Error: {str(e)})")
+        return redirect('membership_plans')
+    
+    context = {
+        'plan_type': plan_type,
+        'amount': amount,
+        'order_amount': amount_paise,
+        'currency': 'INR',
+        'order_id': payment['id'],
+        'api_key': settings.RAZORPAY_KEY_ID,
+        'mock_payment': False,
+    }
+    
+    return render(request, 'payment_checkout.html', context)
+
+@login_required
+def payment_success(request):
+    """Verify Payment Signature and Activate Membership"""
+    
+    plan_type = request.GET.get('plan_type')
+    is_mock = request.GET.get('mock_payment') == 'true'
+
+    if not is_mock:
+        # REAL VERIFICATION
+        razorpay_payment_id = request.GET.get('razorpay_payment_id')
+        razorpay_order_id = request.GET.get('razorpay_order_id')
+        razorpay_signature = request.GET.get('razorpay_signature')
+
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        
+        params_dict = {
+            'razorpay_order_id': razorpay_order_id,
+            'razorpay_payment_id': razorpay_payment_id,
+            'razorpay_signature': razorpay_signature
+        }
+        
+        try:
+            client.utility.verify_payment_signature(params_dict)
+        except razorpay.errors.SignatureVerificationError:
+            messages.error(request, "Payment Verification Failed.")
+            return redirect('membership_plans')
+        except Exception:
+            messages.error(request, "Payment Error.")
+            return redirect('membership_plans')
+            
+    # --- SUCCESS LOGIC (Shared) ---
+    user = request.user
+    duration = 365 if plan_type == 'yearly' else 30
+    
+    # Update User
+    user.membership_expiry = timezone.now() + timedelta(days=duration)
+    user.has_used_free_trial = True
+    user.membership_type = 'YEARLY' if plan_type == 'yearly' else 'MONTHLY'
+    user.save()
+    
+    context = {
+        'plan_type': plan_type,
+        'expiry': user.membership_expiry
+    }
+    return render(request, 'payment_success.html', context)
+@csrf_exempt
+def chatbot_response(request):
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            user_msg = data.get('message', '').lower()
+            
+            user = request.user
+            role = "Support"
+            if user.is_authenticated:
+                if user.user_type == 'BUYER':
+                    role = "Buyer"
+                elif user.user_type == 'FARMER':
+                    role = "Farmer"
+                elif user.is_superuser or user.user_type == 'ADMIN':
+                    role = "Admin"
+            
+            # Get Auction Session Info
+            from .utils import get_current_session_info
+            session_info = get_current_session_info()
+            session_name = session_info['session'].capitalize()
+            
+            # Basic contextual logic
+            response_text = ""
+            if "hello" in user_msg or "hi" in user_msg:
+                response_text = f"Hello! As your {role} assistant, I'm here to help. Currently, we are in the **{session_name}** auction session."
+            
+            elif "session" in user_msg or "time" in user_msg:
+                if session_info['session'] == 'break':
+                    response_text = f"We are currently on a **Break**. The next session (Evening) starts at {session_info['next_session_start'].strftime('%I:%M %p')}."
+                elif session_info['is_active']:
+                    response_text = f"The active session is **{session_name}**. It will end at {session_info['end_time'].strftime('%I:%M %p')}."
+                else:
+                    response_text = f"The sessions are currently **Closed**. The next session starts tomorrow at {session_info['next_session_start'].strftime('%I:%M %p')}."
+            
+            elif ("list" in user_msg or "who" in user_msg) and ("user" in user_msg or "member" in user_msg or "active" in user_msg):
+                if role == "Admin":
+                    from django.contrib.sessions.models import Session
+                    # This is a naive way to find "logged in" users in local dev
+                    # In production, you'd use a more robust way or check recently active
+                    from django.utils import timezone
+                    active_users = User.objects.filter(last_login__gte=timezone.now() - timezone.timedelta(hours=1))
+                    if active_users.exists():
+                        user_list = ", ".join([u.email for u in active_users])
+                        response_text = f"There are {active_users.count()} users active in the last hour: {user_list}."
+                    else:
+                        response_text = "No users have logged in recently."
+                else:
+                    response_text = "Access Denied. Only administrators can list active users."
+
+            elif "bid" in user_msg or "auction" in user_msg:
+                if role == "Buyer":
+                    response_text = "To place a bid, navigate to any live auction in the Marketplace and enter an amount higher than the current bid."
+                elif role == "Farmer":
+                    response_text = "Your active listings are shown on your Dashboard. You'll receive notifications when new bids are placed."
+                else:
+                    response_text = "Auctions are the heart of BidVerse. Buyers use them to purchase fresh commodities directly from farmers."
+            
+            elif "membership" in user_msg or "plan" in user_msg:
+                response_text = "We offer various membership plans including Free Trial, Monthly, and Yearly. Check the Membership section for details."
+            
+            elif "contact" in user_msg or "support" in user_msg:
+                response_text = "You can reach our support team via the Contact page or by emailing support@bidverse.com."
+            
+            else:
+                response_text = f"I'm the {role} assistant. I can help you with auction sessions, bidding rules, or account management. Currently, the {session_name} session is underway."
+                
+            return JsonResponse({'response': response_text})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    return JsonResponse({'error': 'Invalid request'}, status=405)

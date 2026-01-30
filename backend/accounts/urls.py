@@ -15,6 +15,13 @@ urlpatterns = [
     path('register/', views.register_user, name='register'),
     path('logout/', views.logout_user, name='logout'),
     path('check-auth/', views.check_auth_status, name='check_auth'),
+    
+    # Membership - Moved to bidverse/urls.py
+    # path('membership/', views.membership_plans, name='membership_plans'),
+    # path('membership/purchase/<str:plan_type>/', views.purchase_membership, name='purchase_membership'),
+    
+    path('checkout/<int:listing_id>/', views.checkout_auction, name='checkout_auction'),
+
 
     # Google OAuth
     path('oauth/', include('social_django.urls', namespace='social')),

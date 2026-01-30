@@ -97,7 +97,6 @@
                         </div>
                     </div>
 
-                    {% if user.user_type == 'BUYER' %}
                     <!-- Notification Dropdown -->
                     <div class="profile-dropdown">
                         <button class="profile-icon-btn" onclick="toggleNotificationDropdown()" aria-label="Notifications" style="position: relative;">
@@ -116,7 +115,6 @@
                             </div>
                         </div>
                     </div>
-                    {% endif %}
                 </div>
 
                 {% else %}
@@ -130,6 +128,19 @@
 
     <!-- Main content -->
     <main>
+        <!-- Global Messages -->
+        {% if messages %}
+        <div class="container mt-4">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {% block content %}{% endblock %}
     </main>
 

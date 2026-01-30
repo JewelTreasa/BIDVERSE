@@ -47,12 +47,12 @@
                     <p>Fill in your details to get started.</p>
                 </div>
 
-                <form method="POST" action="/register/" class="register-form">
+                <form method="POST" action="/register/" class="register-form" enctype="multipart/form-data">
                     <div class="form-group">
                         <label for="fullname">Full Name</label>
                         <div class="input-with-icon">
                             <i class="fas fa-user"></i>
-                            <input type="text" id="fullname" placeholder="John Doe" required>
+                            <input type="text" id="fullname" name="fullname" placeholder="John Doe" required>
                         </div>
                     </div>
 
@@ -61,7 +61,7 @@
                             <label for="phone">Phone Number</label>
                             <div class="input-with-icon">
                                 <i class="fas fa-phone"></i>
-                                <input type="tel" id="phone" placeholder="+91 98765 43210" required>
+                                <input type="tel" id="phone" name="phone" placeholder="+91 98765 43210" required>
                             </div>
                         </div>
                         <div class="form-group half-width">
@@ -81,8 +81,25 @@
                         <label for="email">Email Address</label>
                         <div class="input-with-icon">
                             <i class="fas fa-envelope"></i>
-                            <input type="email" id="email" placeholder="john@example.com" required>
+                            <input type="email" id="email" name="email" placeholder="john@example.com" required>
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Address</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <textarea id="address" name="address" placeholder="Full Address with Pincode" required style="width: 100%; padding: 12px; padding-left: 45px; border: 1px solid #e2e8f0; border-radius: 12px; outline: none; transition: border-color 0.3s; font-family: inherit; resize: vertical; min-height: 80px;"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="id-proof-group" style="display: none;">
+                        <label for="id_proof">ID Proof (Government ID)</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-id-card"></i>
+                            <input type="file" id="id_proof" name="id_proof" accept="image/*,.pdf" style="padding-top: 10px;">
+                        </div>
+                        <small class="text-muted" style="font-size: 0.8rem; display: block; margin-top: 5px;">Required for Farmer verification.</small>
                     </div>
 
                     <div class="form-row-split">
@@ -90,14 +107,14 @@
                             <label for="password">Password</label>
                             <div class="input-with-icon">
                                 <i class="fas fa-lock"></i>
-                                <input type="password" id="password" placeholder="Min 8 chars" required>
+                                <input type="password" id="password" name="password" placeholder="Min 8 chars" required>
                             </div>
                         </div>
                         <div class="form-group half-width">
                             <label for="confirm-password">Confirm</label>
                             <div class="input-with-icon">
                                 <i class="fas fa-lock"></i>
-                                <input type="password" id="confirm-password" placeholder="Confirm" required>
+                                <input type="password" id="confirm-password" name="confirm_password" placeholder="Confirm" required>
                             </div>
                         </div>
                     </div>
@@ -130,6 +147,18 @@
         </div>
     </div>
 
+    <script>
+        document.getElementById('usertype').addEventListener('change', function() {
+            var idProofGroup = document.getElementById('id-proof-group');
+            if (this.value === 'farmer') {
+                idProofGroup.style.display = 'block';
+                document.getElementById('id_proof').required = true;
+            } else {
+                idProofGroup.style.display = 'none';
+                document.getElementById('id_proof').required = false;
+            }
+        });
+    </script>
 </body>
 
 </html>

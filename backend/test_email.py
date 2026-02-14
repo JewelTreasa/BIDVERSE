@@ -125,20 +125,25 @@ def main():
     print("BidVerse Email & Password Reset Configuration Test")
     print("=" * 50)
 
-    email_success = test_email_configuration()
-    reset_success = test_password_reset_flow()
+    try:
+        email_success = test_email_configuration()
+        reset_success = test_password_reset_flow()
+    except Exception as e:
+        print(f"CRITICAL ERROR: {e}")
+        email_success = False
+        reset_success = False
 
     print("\n" + "=" * 50)
     print("SUMMARY:")
     print(f"Email Configuration: {'PASS' if email_success else 'FAIL'}")
     print(f"Password Reset Flow: {'PASS' if reset_success else 'FAIL'}")
 
+    with open('email_test_results.txt', 'w') as f:
+        f.write(f"Email Configuration: {'PASS' if email_success else 'FAIL'}\n")
+        f.write(f"Password Reset Flow: {'PASS' if reset_success else 'FAIL'}\n")
+        
     if email_success and reset_success:
         print("\n[SUCCESS] All tests passed! Password reset via email is ready to use.")
-        print("\nNext steps:")
-        print("1. Start your Django server: python manage.py runserver")
-        print("2. Test password reset at: http://localhost:8000/forgot-password/")
-        print("3. Or use the API endpoints for programmatic access")
     else:
         print("\n[FAILED] Some tests failed. Please check the configuration above.")
 

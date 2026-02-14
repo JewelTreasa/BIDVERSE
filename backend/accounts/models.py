@@ -19,6 +19,16 @@ class User(AbstractUser):
     address = models.TextField(blank=True, help_text="Full address for delivery/pickup")
     id_proof = models.FileField(upload_to='id_proofs/', blank=True, null=True, help_text="Upload ID proof for verification (Farmers only)")
     
+    # Seller Business Details
+    business_name = models.CharField(max_length=255, blank=True, help_text="Farm or Business Name")
+    gstin = models.CharField(max_length=15, blank=True, help_text="GST Identification Number")
+    pan_number = models.CharField(max_length=10, blank=True, help_text="Permanent Account Number")
+    
+    # Seller Bank Details
+    bank_account_number = models.CharField(max_length=20, blank=True)
+    bank_ifsc_code = models.CharField(max_length=11, blank=True)
+    bank_name = models.CharField(max_length=100, blank=True)
+    
     # Membership Fields
     has_used_free_trial = models.BooleanField(default=False)
     membership_expiry = models.DateTimeField(null=True, blank=True)
@@ -178,6 +188,12 @@ class Listing(models.Model):
             return '/assets/images/spices.jpg'
         elif 'tea' in name:
             return '/assets/images/tea.jpg'
+        elif 'rubber' in name:
+            return '/assets/images/rubber_sheet.jpg'
+        elif 'arecanut' in name:
+            return '/assets/images/arecanut.png'
+        elif 'raisin' in name or ('dried' in name and 'grape' in name):
+            return '/assets/images/black_raisins.png'
         return '/assets/images/placeholder-agri.jpg'
 
     @property
@@ -240,11 +256,23 @@ class Order(models.Model):
         ('CANCELLED', 'Cancelled'),
     )
 
+    PAYMENT_CHOICES = (
+        ('ONLINE', 'Online Payment'),
+        ('COD', 'Cash on Delivery'),
+    )
+
     listing = models.OneToOneField(Listing, on_delete=models.CASCADE, related_name='order')
     buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     delivery_method = models.CharField(max_length=10, choices=DELIVERY_CHOICES, default='PICKUP')
     shipping_address = models.TextField(help_text="Address at time of order")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_CHOICES, default='ONLINE')
+    
+    # Financial Details
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, help_text="Final calculated amount (Bid x Quantity + Shipping)", default=0.00)
+    shipping_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    razorpay_order_id = models.CharField(max_length=100, null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

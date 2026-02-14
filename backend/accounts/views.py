@@ -18,6 +18,8 @@ from datetime import datetime, time, timedelta
 from django.db.models import Q
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse 
+import razorpay
+from django.conf import settings 
 # Use our custom User model
 from django.contrib.auth import get_user_model
 from .models import Listing, Bid, NotificationSubscription, Notification
@@ -27,10 +29,14 @@ from .utils import (
     get_current_session_info, 
     auto_end_expired_auctions, 
     send_auction_notifications,
+    calculate_listing_end_time,
     MORNING_START, MORNING_END, EVENING_START, EVENING_END, BREAK_START, BREAK_END
 )
 
 # Logic is now in utils.py to support background tasks
+
+# Initialize Razorpay Client
+razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 def membership_required(view_func):
     """
@@ -398,7 +404,7 @@ from django.contrib.auth.views import (
 
 class CustomPasswordResetView(PasswordResetView):
     # Basic template configuration
-    template_name = 'registration/password_reset_form.html'
+    template_name = 'forgot-password.html'
     email_template_name = 'registration/password_reset_email.html'
     subject_template_name = 'registration/password_reset_subject.txt'
     success_url = '/password-reset/done/'
@@ -517,7 +523,7 @@ def login_user(request):
                         # Set session variable for immediate access
                         request.session['is_free_trial_session'] = True
                         
-                        messages.success(request, "Welcome! You are using your one-time Free Trial session.")
+                        # messages.success(request, "Welcome! You are using your one-time Free Trial session.")
                     else:
                         # Trial used AND no membership -> Redirect to Plans
                         messages.warning(request, "Your free trial has ended. Please purchase a membership to continue.")
@@ -535,8 +541,45 @@ def login_user(request):
                 error_msg = "No account found with this email address."
             return render(request, "login.html", {"error": error_msg})
 
-    # Handle GET requests - display the login form
     return render(request, "login.html", {})
+
+@csrf_exempt
+def payment_success(request):
+    """
+    Handle Razorpay payment success callback.
+    """
+    if request.method == "POST":
+        try:
+            payment_id = request.POST.get('razorpay_payment_id', '')
+            razorpay_order_id = request.POST.get('razorpay_order_id', '')
+            signature = request.POST.get('razorpay_signature', '')
+            
+            # Verify Signature (In production, uncomment verification)
+            # params_dict = {
+            #     'razorpay_order_id': razorpay_order_id,
+            #     'razorpay_payment_id': payment_id,
+            #     'razorpay_signature': signature
+            # }
+            # razorpay_client.utility.verify_payment_signature(params_dict)
+            
+            # Find the pending order
+            order = Order.objects.get(razorpay_order_id=razorpay_order_id)
+            
+            # Update Status
+            order.status = 'CONFIRMED'
+            order.save()
+            
+            # Redirect to the summary/checkout page (which will now show order summary)
+            return redirect('checkout_auction', listing_id=order.listing.id)
+            
+        except Order.DoesNotExist:
+            print("Order not found for razorpay_id:", razorpay_order_id)
+            return redirect('dashboard')
+        except Exception as e:
+            print("Payment Error:", str(e))
+            return redirect('dashboard')
+            
+    return redirect('dashboard')
 
 @login_required
 def logout_user(request):
@@ -669,6 +712,15 @@ def register_user(request):
             if user_role == 'FARMER':
                 if 'id_proof' in request.FILES:
                     user.id_proof = request.FILES['id_proof']
+                
+                # Save Business & Bank Details
+                user.business_name = request.POST.get('business_name', '')
+                user.pan_number = request.POST.get('pan_number', '')
+                user.gstin = request.POST.get('gstin', '')
+                user.bank_name = request.POST.get('bank_name', '')
+                user.bank_account_number = request.POST.get('bank_account_number', '')
+                user.bank_ifsc_code = request.POST.get('bank_ifsc_code', '')
+                
                 # Farmers are unverified by default until ID check
                 user.is_verified = False
             else:
@@ -703,20 +755,103 @@ def checkout_auction(request, listing_id):
     if hasattr(listing, 'order'):
          return render(request, 'order_summary.html', {'order': listing.order})
     
+    # Calculate Base Amount (Bid x Quantity)
+    base_amount = listing.quantity * highest_bid.amount
+    
     if request.method == 'POST':
         delivery_method = request.POST.get('delivery_method')
         shipping_address = request.POST.get('shipping_address')
+        payment_method = request.POST.get('payment_method')
+
+        # Calculate Shipping Charge
+        shipping_amount = 0
+        if delivery_method == 'DELIVERY':
+            # Shipping Charge: 2 per unit
+            shipping_amount = listing.quantity * 2
+            
+        total_amount = base_amount + shipping_amount
         
-        # Create Order
-        order = Order.objects.create(
-            listing=listing,
-            buyer=request.user,
-            delivery_method=delivery_method,
-            shipping_address=shipping_address,
-            status='CONFIRMED' # Auto-confirm for now as per flow
-        )
-        # Redirect to the same view to show summary now
-        return redirect('checkout_auction', listing_id=listing.id)
+        if payment_method == 'ONLINE':
+            # Create Razorpay Order
+            currency = 'INR'
+            amount = int(total_amount * 100) # Amount in paise
+            
+            try:
+                razorpay_order = razorpay_client.order.create(dict(
+                    amount=amount,
+                    currency=currency,
+                    payment_capture='1'
+                ))
+                razorpay_order_id = razorpay_order['id']
+                
+                # Create Order (PENDING)
+                order = Order.objects.create(
+                    listing=listing,
+                    buyer=request.user,
+                    delivery_method=delivery_method,
+                    shipping_address=shipping_address,
+                    payment_method=payment_method,
+                    shipping_amount=shipping_amount,
+                    total_amount=total_amount,
+                    status='PENDING', # Pending payment
+                    razorpay_order_id=razorpay_order_id
+                )
+                
+                # Render the template again with Razorpay details
+                return render(request, 'checkout_auction.html', {
+                    'listing': listing,
+                    'bid_amount': highest_bid.amount,
+                    'quantity': listing.quantity,
+                    'unit': listing.unit,
+                    'base_amount': base_amount,
+                    'user_address': request.user.address,
+                    
+                    # Razorpay Data
+                    'razorpay_order_id': razorpay_order_id,
+                    'razorpay_merchant_key': settings.RAZORPAY_KEY_ID,
+                    'razorpay_amount': amount,
+                    'currency': currency,
+                    'callback_url': request.build_absolute_uri(reverse('payment_success')),
+                    
+                    # Context for pre-filling form if they cancel payment
+                    'selected_delivery_method': delivery_method,
+                    'shipping_address': shipping_address
+                })
+            except Exception as e:
+                return render(request, 'checkout_auction.html', {
+                    'listing': listing,
+                    'bid_amount': highest_bid.amount,
+                    'quantity': listing.quantity,
+                    'unit': listing.unit,
+                    'base_amount': base_amount,
+                    'user_address': request.user.address,
+                    'error': f"Error creating payment order: {str(e)}"
+                })
+
+        # COD Flow
+        if payment_method == 'COD':
+            # Create Order
+            order = Order.objects.create(
+                listing=listing,
+                buyer=request.user,
+                delivery_method=delivery_method,
+                shipping_address=shipping_address,
+                payment_method=payment_method,
+                shipping_amount=shipping_amount,
+                total_amount=total_amount,
+                status='CONFIRMED' # Auto-confirm for now
+            )
+            # Redirect to summary
+            return redirect('checkout_auction', listing_id=listing.id)
+
+    return render(request, 'checkout_auction.html', {
+        'listing': listing,
+        'bid_amount': highest_bid.amount,
+        'quantity': listing.quantity,
+        'unit': listing.unit,
+        'base_amount': base_amount, # Pass base amount for JS calculation
+        'user_address': request.user.address
+    })
 
     return render(request, 'checkout_auction.html', {
         'listing': listing,
@@ -776,6 +911,14 @@ def dashboard(request):
     
     if user_type == 'FARMER':
         if request.method == 'POST' and section == 'add_listing':
+            # --- FREE TRIAL ENFORCEMENT ---
+            if request.session.get('is_free_trial_session', False):
+                active_count = Listing.objects.filter(seller=request.user, is_active=True).count()
+                if active_count >= 1:
+                    messages.error(request, "Free Trial Limit Reached: You can only have 1 active listing. Please upgrade to a membership plan.")
+                    return redirect('membership_plans')
+            # ------------------------------
+
             # Get session selections
             morning_session = request.POST.get('morning_session') == 'on'
             evening_session = request.POST.get('evening_session') == 'on'
@@ -805,7 +948,27 @@ def dashboard(request):
 
             # Create a listing for EACH selected date
             created_count = 0
+            now = timezone.localtime(timezone.now())
+            today = now.date()
+            current_time = now.time()
+
             for selected_date in dates_to_create:
+                # Validation: Cannot select a session that has already passed for TODAY
+                if selected_date == today:
+                    if morning_session and current_time > MORNING_END:
+                         messages.error(request, "Cannot schedule for Morning Session today as it has already ended.")
+                         return redirect(reverse('dashboard') + '?section=add_listing')
+                    
+                    if evening_session and current_time > EVENING_END:
+                         messages.error(request, "Cannot schedule for Evening Session today as it has already ended.")
+                         return redirect(reverse('dashboard') + '?section=add_listing')
+
+                    # Also strict check: Cannot schedule for morning if morning START has passed? 
+                    # User requested: "time already past mrng session now" -> implies it is over.
+                    # If user means "Started", we should use MORNING_START.
+                    # But sticking to END is safer to avoid blocking "Live" listings if that's a feature.
+                    # Given the user says "time already past mrng session", and it is 16:37, it is definitely ENDED.
+
                 # Calculate end_time based on sessions
                 end_time = calculate_listing_end_time(selected_date, morning_session, evening_session)
                 
@@ -886,7 +1049,14 @@ def dashboard(request):
         elif section == 'dashboard':
             context['active_listings_count'] = Listing.objects.filter(seller=request.user, is_active=True).count()
             context['items_sold'] = Listing.objects.filter(seller=request.user, is_active=False).count()
-            context['total_revenue'] = sum(l.current_highest_bid for l in Listing.objects.filter(seller=request.user, is_active=False) if l.current_highest_bid)
+            
+            # Correct Revenue Calculation: Sum of CONFIRMED or COMPLETED orders
+            confirmed_orders = Order.objects.filter(
+                listing__seller=request.user,
+                status__in=['CONFIRMED', 'COMPLETED']
+            )
+            context['total_revenue'] = sum(o.total_amount for o in confirmed_orders)
+            
             context['live_listings'] = Listing.objects.filter(seller=request.user, is_active=True).order_by('-created_at')[:5]
             
             # Graph Data for Farmer: Last 7 days listings created
@@ -1216,51 +1386,90 @@ def purchase_membership(request, plan_type):
     
     return render(request, 'payment_checkout.html', context)
 
+@csrf_exempt
 @login_required
 def payment_success(request):
-    """Verify Payment Signature and Activate Membership"""
+    """Verify Payment Signature and Activate Membership OR Confirm Auction Order"""
     
-    plan_type = request.GET.get('plan_type')
-    is_mock = request.GET.get('mock_payment') == 'true'
+    # Check both POST (Razorpay) and GET (Mock/Manual)
+    data = request.POST if request.method == 'POST' else request.GET
+    
+    # 1. Check if this is a Membership Payment
+    plan_type = data.get('plan_type')
+    is_mock = data.get('mock_payment') == 'true'
+    
+    razorpay_payment_id = data.get('razorpay_payment_id')
+    razorpay_order_id = data.get('razorpay_order_id')
+    razorpay_signature = data.get('razorpay_signature')
 
-    if not is_mock:
-        # REAL VERIFICATION
-        razorpay_payment_id = request.GET.get('razorpay_payment_id')
-        razorpay_order_id = request.GET.get('razorpay_order_id')
-        razorpay_signature = request.GET.get('razorpay_signature')
-
-        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-        
-        params_dict = {
-            'razorpay_order_id': razorpay_order_id,
-            'razorpay_payment_id': razorpay_payment_id,
-            'razorpay_signature': razorpay_signature
-        }
-        
-        try:
-            client.utility.verify_payment_signature(params_dict)
-        except razorpay.errors.SignatureVerificationError:
-            messages.error(request, "Payment Verification Failed.")
-            return redirect('membership_plans')
-        except Exception:
-            messages.error(request, "Payment Error.")
-            return redirect('membership_plans')
+    if plan_type:
+        if not is_mock:
+            # REAL VERIFICATION
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
             
-    # --- SUCCESS LOGIC (Shared) ---
-    user = request.user
-    duration = 365 if plan_type == 'yearly' else 30
-    
-    # Update User
-    user.membership_expiry = timezone.now() + timedelta(days=duration)
-    user.has_used_free_trial = True
-    user.membership_type = 'YEARLY' if plan_type == 'yearly' else 'MONTHLY'
-    user.save()
-    
-    context = {
-        'plan_type': plan_type,
-        'expiry': user.membership_expiry
-    }
-    return render(request, 'payment_success.html', context)
+            params_dict = {
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_signature': razorpay_signature
+            }
+            
+            try:
+                client.utility.verify_payment_signature(params_dict)
+            except razorpay.errors.SignatureVerificationError:
+                messages.error(request, "Payment Verification Failed.")
+                return redirect('membership_plans')
+            except Exception:
+                messages.error(request, "Payment Error.")
+                return redirect('membership_plans')
+                
+        # --- SUCCESS LOGIC (Shared) ---
+        user = request.user
+        duration = 365 if plan_type == 'yearly' else 30
+        
+        # Update User
+        user.membership_expiry = timezone.now() + timedelta(days=duration)
+        user.has_used_free_trial = True
+        user.membership_type = 'YEARLY' if plan_type == 'yearly' else 'MONTHLY'
+        user.save()
+        
+        context = {
+            'plan_type': plan_type,
+            'expiry': user.membership_expiry
+        }
+        return render(request, 'payment_success.html', context)
+
+    # 2. Check if this is an Auction Order Payment
+    elif razorpay_order_id:
+        try:
+            # Find the order by Razorpay Order ID
+            order = Order.objects.get(razorpay_order_id=razorpay_order_id)
+        except Order.DoesNotExist:
+            messages.error(request, "Order not found.")
+            return redirect('dashboard')
+
+        if not is_mock:
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            params_dict = {
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': razorpay_payment_id,
+                'razorpay_signature': razorpay_signature
+            }
+            try:
+                client.utility.verify_payment_signature(params_dict)
+            except Exception:
+                messages.error(request, "Payment Verification Failed for Order.")
+                return redirect('checkout_auction', listing_id=order.listing.id)
+        
+        # Success: Confirm the Order
+        order.status = 'CONFIRMED'
+        order.save()
+        
+        messages.success(request, f"Payment Successful! Order for {order.listing.commodity} confirmed.")
+        # Redirect to Buyer Dashboard -> Orders section
+        return redirect(reverse('dashboard') + '?section=orders')
+
+    # Fallback
+    return redirect('dashboard')
 @csrf_exempt
 def chatbot_response(request):
     if request.method == 'POST':
@@ -1333,3 +1542,137 @@ def chatbot_response(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Invalid request'}, status=405)
+
+@login_required
+def send_reminder_email(request, listing_id):
+    """
+    Send a reminder email to the winner of a listing.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=405)
+        
+    listing = get_object_or_404(Listing, id=listing_id)
+    
+    # Ensure the requester is the seller
+    if listing.seller != request.user:
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+        
+    # Get the winner
+    highest_bid = listing.bids.order_by('-amount').first()
+    if not highest_bid:
+        return JsonResponse({'error': 'No winner found'}, status=404)
+        
+    winner = highest_bid.buyer
+    
+    # Send Email
+    subject = f"Reminder: Claim your won auction - {listing.commodity}"
+    message = f"""
+    Hi {winner.first_name},
+    
+    This is a reminder from the seller regarding your won auction:
+    
+    Item: {listing.commodity}
+    Winning Bid: ₹{highest_bid.amount}
+    
+    Please assume responsibility for the collection/delivery of your item as soon as possible.
+    
+    Regards,
+    {listing.seller.get_full_name() or listing.seller.email}
+    """
+    
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [winner.email],
+            fail_silently=False
+        )
+        return JsonResponse({'success': True, 'message': 'Reminder sent successfully'})
+    except Exception as e:
+        print(f"Error sending reminder: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
+def settings_view(request):
+    """
+    View to handle User Settings and Profile Update.
+    """
+    from .forms import UserProfileForm # Local import to avoid circular dependency if any
+
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your profile has been updated successfully.')
+            return redirect('settings')
+        else:
+            print("Settings Form Errors:", form.errors)
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = UserProfileForm(instance=request.user)
+    
+    return render(request, 'settings.html', {'form': form})
+
+@csrf_exempt
+def chatbot_message(request):
+    """
+    Handle Chatbot Messages.
+    Returns a JSON response based on keywords and user role.
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_msg = data.get('message', '').lower()
+            
+            user = request.user
+            role = "Guest"
+            if user.is_authenticated:
+                if user.user_type == 'BUYER':
+                    role = "Buyer"
+                elif user.user_type == 'FARMER':
+                    role = "Farmer"
+                elif user.is_superuser or user.user_type == 'ADMIN':
+                    role = "Admin"
+            
+            # --- Logic ---
+            response_text = ""
+
+            # 1. Greetings
+            if any(x in user_msg for x in ['hi', 'hello', 'hey']):
+                response_text = f"Hello! I am your {role} Assistant. How can I help you today?"
+
+            # 2. General Help
+            elif any(x in user_msg for x in ['help', 'support', 'contact']):
+                response_text = "You can contact support at **support@bidverse.com** or call us at **+91 98765 43210**. We are available 24/7."
+
+            # 3. Auctions / Bidding (Buyer/Guest focus)
+            elif any(x in user_msg for x in ['auction', 'bid', 'buy']):
+                if role == "Farmer":
+                    response_text = "As a **Farmer**, you can currently **list items** for auction. Switch to a Buyer account to place bids."
+                else:
+                    response_text = "To place a bid, go to the **Auctions** page, select an item, and enter your amount. Ensure you have a valid account."
+
+            # 4. Selling / Listing (Farmer focus)
+            elif any(x in user_msg for x in ['sell', 'list', 'farmer']):
+                if role == "Buyer":
+                    response_text = "As a **Buyer**, you can bid on items. To sell crops, please register as a **Farmer**."
+                elif role == "Guest":
+                    response_text = "To sell your produce, please **Register** as a Farmer first."
+                else:
+                    response_text = "To sell, go to your **Dashboard** and click **'Add Listing'**. You can set the quantity, unit, and base price."
+
+            # 5. Pricing / Commission
+            elif any(x in user_msg for x in ['price', 'cost', 'fee', 'commission']):
+                response_text = "BidVerse charges a minimal platform fee on successful auctions. Registration is free for everyone!"
+
+            # 6. Default Fallback
+            else:
+                response_text = "I'm sorry, I didn't quite catch that. Try asking about **auctions**, **selling**, or **support**."
+
+            return JsonResponse({'response': response_text})
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=400)

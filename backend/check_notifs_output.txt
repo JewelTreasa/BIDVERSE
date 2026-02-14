@@ -1,0 +1,55 @@
+Checking for user: jeweltreasaraphel2028@mca.ajce.in
+Found 17 'Win' notifications.
+
+[Notification] 'Fresh Tomatoes' on 2026-01-21
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Green Grapes' on 2026-01-21
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Red Onions' on 2026-01-21
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Shimla Apples' on 2026-01-21
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Green Grapes' on 2026-01-20
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Fresh Tomatoes' on 2026-01-19
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Small Cardamom (Elaichi)' on 2026-01-18
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Onion' on 2026-01-18
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Small Cardamom (Elaichi)' on 2026-01-18
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Small Cardamom (Elaichi)' on 2026-01-18
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Small Cardamom (Elaichi)' on 2026-01-18
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Arecanut' on 2026-01-18
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Arecanut' on 2026-01-18
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Arecanut' on 2026-01-18
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Basmati Rice' on 2026-01-18
+  -> NO inactive listings found for this commodity. (Listing likely deleted)
+
+[Notification] 'Organic Potatoes' on 2026-01-18
+  -> Found 1 inactive listing(s) matching 'Organic Potatoes'. Checking bids...
+     List ID 150: No bids.
+  -> No matching listing found where user is the winner.
+
+[Notification] 'Red Onions' on 2026-01-18
+  -> NO inactive listings found for this commodity. (Listing likely deleted)

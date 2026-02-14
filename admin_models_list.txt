@@ -1,0 +1,13 @@
+--- Registered Models ---
+Group (Admin: GroupAdmin)
+Site (Admin: SiteAdmin)
+UserSocialAuth (Admin: UserSocialAuthOption)
+Nonce (Admin: NonceOption)
+Association (Admin: AssociationOption)
+User (Admin: CustomUserAdmin)
+Listing (Admin: ListingAdmin)
+Bid (Admin: BidAdmin)
+NotificationSubscription (Admin: ModelAdmin)
+Notification (Admin: NotificationAdmin)
+Order (Admin: OrderAdmin)
+Total: 11

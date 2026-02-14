@@ -281,6 +281,17 @@
                         </a>
                     </li>
                 </ul>
+            <div class="membership-tile" style="margin-top: 20px; background: #e0f2f1; padding: 15px; border-radius: 10px; border: 1px solid #b2dfdb; text-align: center;">
+                <h4 style="margin-bottom: 5px; color: #00695c; font-size: 16px;">Current Plan</h4>
+                <p style="font-weight: bold; color: #004d40; font-size: 18px; margin-bottom: 5px;">
+                    {% if user.membership_type == 'TRIAL' %}Free Trial{% elif user.membership_type == 'MONTHLY' %}Monthly Plan{% elif user.membership_type == 'YEARLY' %}Yearly Plan{% else %}No Plan{% endif %}
+                </p>
+                {% if user.membership_expiry %}
+                <small style="color: #00796b; display: block;">Expires: {{ user.membership_expiry|date:"M d, Y" }}</small>
+                {% else %}
+                <a href="{% url 'membership_plans' %}" style="font-size: 12px; color: #00796b; text-decoration: underline;">Upgrade Now</a>
+                {% endif %}
+            </div>
             </aside>
 
             <!-- Main Content -->

@@ -31,4 +31,16 @@ urlpatterns = [
     path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
     path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
+
+    # Reminder Email
+    path('reminder/send/<int:listing_id>/', views.send_reminder_email, name='send_reminder_email'),
+
+    # Payment Callback
+    path('payment/success/', views.payment_success, name='payment_success'),
+
+    # Settings
+    path('settings/', views.settings_view, name='settings'),
+    
+    # Chatbot
+    path('chatbot/message/', views.chatbot_message, name='chatbot_message'),
 ]

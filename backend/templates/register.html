@@ -48,6 +48,7 @@
                 </div>
 
                 <form method="POST" action="/register/" class="register-form" enctype="multipart/form-data">
+                    {% csrf_token %}
                     <div class="form-group">
                         <label for="fullname">Full Name</label>
                         <div class="input-with-icon">
@@ -102,6 +103,60 @@
                         <small class="text-muted" style="font-size: 0.8rem; display: block; margin-top: 5px;">Required for Farmer verification.</small>
                     </div>
 
+                    <!-- Seller Specific Fields -->
+                    <div id="seller-fields" style="display: none; border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 20px;">
+                        <h4 style="font-size: 1.1rem; color: #2e7d32; margin-bottom: 15px; font-weight: 600;">Business Details</h4>
+                        <div class="form-group">
+                            <label for="business_name">Farm / Business Name</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-building"></i>
+                                <input type="text" id="business_name" name="business_name" placeholder="e.g. Green Valley Farms">
+                            </div>
+                        </div>
+
+                        <div class="form-row-split">
+                            <div class="form-group half-width">
+                                <label for="pan_number">PAN Number</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-id-card-alt"></i>
+                                    <input type="text" id="pan_number" name="pan_number" placeholder="ABCDE1234F" style="text-transform: uppercase;">
+                                </div>
+                            </div>
+                            <div class="form-group half-width">
+                                <label for="gstin">GSTIN (Optional)</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-file-invoice"></i>
+                                    <input type="text" id="gstin" name="gstin" placeholder="GST Number" style="text-transform: uppercase;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <h4 style="font-size: 1.1rem; color: #2e7d32; margin-bottom: 15px; font-weight: 600; margin-top: 10px;">Bank Details (For Payouts)</h4>
+                        <div class="form-group">
+                            <label for="bank_name">Bank Name</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-university"></i>
+                                <input type="text" id="bank_name" name="bank_name" placeholder="e.g. State Bank of India">
+                            </div>
+                        </div>
+                        <div class="form-row-split">
+                            <div class="form-group half-width">
+                                <label for="bank_account_number">Account Number</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-money-check-alt"></i>
+                                    <input type="text" id="bank_account_number" name="bank_account_number" placeholder="Account Number">
+                                </div>
+                            </div>
+                            <div class="form-group half-width">
+                                <label for="bank_ifsc_code">IFSC Code</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-code-branch"></i>
+                                    <input type="text" id="bank_ifsc_code" name="bank_ifsc_code" placeholder="SBIN0001234" style="text-transform: uppercase;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-row-split">
                         <div class="form-group half-width">
                             <label for="password">Password</label>
@@ -150,12 +205,31 @@
     <script>
         document.getElementById('usertype').addEventListener('change', function() {
             var idProofGroup = document.getElementById('id-proof-group');
+            var sellerFields = document.getElementById('seller-fields');
+            
             if (this.value === 'farmer') {
                 idProofGroup.style.display = 'block';
+                sellerFields.style.display = 'block';
                 document.getElementById('id_proof').required = true;
+                
+                // Make seller fields required if farmer
+                document.getElementById('business_name').required = true;
+                document.getElementById('pan_number').required = true;
+                document.getElementById('bank_name').required = true;
+                document.getElementById('bank_account_number').required = true;
+                document.getElementById('bank_ifsc_code').required = true;
+                
             } else {
                 idProofGroup.style.display = 'none';
+                sellerFields.style.display = 'none';
                 document.getElementById('id_proof').required = false;
+                
+                // Remove required attribute
+                document.getElementById('business_name').required = false;
+                document.getElementById('pan_number').required = false;
+                document.getElementById('bank_name').required = false;
+                document.getElementById('bank_account_number').required = false;
+                document.getElementById('bank_ifsc_code').required = false;
             }
         });
     </script>

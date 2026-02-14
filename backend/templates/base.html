@@ -49,6 +49,29 @@
         }
     </style>
     
+
+    <!-- Dark Mode Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggle = document.getElementById('darkModeToggle');
+            const icon = toggle ? toggle.querySelector('i') : null;
+            
+            // Check Local Storage
+            if (localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-mode');
+                if(icon) icon.className = 'fas fa-sun';
+            }
+
+            if (toggle) {
+                toggle.addEventListener('click', () => {
+                    document.body.classList.toggle('dark-mode');
+                    const isDark = document.body.classList.contains('dark-mode');
+                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                    if(icon) icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+                });
+            }
+        });
+    </script>
     {% block extra_head %}{% endblock %}
 </head>
 
@@ -75,7 +98,7 @@
             </div>
             <div class="nav-buttons">
                 {% if user.is_authenticated %}
-                <span class="user-name-nav">Hi, {{ user.first_name }}</span>
+                <span class="user-name-nav">Hi, {% if user.user_type == 'ADMIN' or user.is_superuser %}Admin{% else %}{{ user.first_name|default:user.username }}{% endif %}</span>
                 
                 <div style="display: flex; gap: 5px; align-items: center;">
                     <!-- Profile Dropdown -->
@@ -121,6 +144,10 @@
                 <a href="{% url 'login' %}" class="btn btn-outline">Log In</a>
                 <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
                 {% endif %}
+                <!-- Dark Mode Toggle -->
+                <button class="profile-icon-btn" id="darkModeToggle" aria-label="Toggle Dark Mode" style="margin-left: 10px;">
+                     <i class="fas fa-moon"></i>
+                </button>
             </div>
             <button class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
         </div>
@@ -130,12 +157,14 @@
     <main>
         <!-- Global Messages -->
         {% if messages %}
-        <div class="container mt-4">
+        <div class="message-container" style="position: fixed; top: 100px; right: 20px; z-index: 1050; max-width: 400px;">
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
-                    <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} me-2"></i>
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-lg" role="alert" style="margin-bottom: 10px; border-left: 5px solid {% if message.tags == 'success' %}#2e7d32{% elif message.tags == 'error' %}#dc2626{% else %}#1E293B{% endif %};">
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} me-2" style="font-size: 1.2rem; margin-right: 10px;"></i>
+                        <div>{{ message }}</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="background: none; border: none; position: absolute; top: 5px; right: 10px; font-size: 1.2rem; cursor: pointer;">&times;</button>
                 </div>
             {% endfor %}
         </div>
@@ -177,6 +206,8 @@
                         <a href="#"><i class="fab fa-instagram"></i></a>
                         <a href="#"><i class="fab fa-linkedin-in"></i></a>
                     </div>
+                </div>
+
                 </div>
             </div>
             <div class="footer-bottom">

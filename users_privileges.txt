@@ -1,0 +1,12 @@
+12: jtreasaraphel - Super:False Staff:False
+13: jeweltreasaraphel2028 - Super:False Staff:False
+14: jwala@gmail.com - Super:False Staff:False
+16: bidverse80 - Super:False Staff:False
+17: junaelsamathew2028@mca.ajce.in - Super:False Staff:False
+18: alan@gmail.com - Super:False Staff:False
+48: annachritinajohny2028@mca.ajce.in - Super:False Staff:False
+52: alphonsaauguestine2028@mca.ajce.in - Super:False Staff:False
+56: farmer1@example.com - Super:False Staff:False
+57: farmer2@example.com - Super:False Staff:False
+58: farmer3@example.com - Super:False Staff:False
+59: admin@example.com - Super:True Staff:True

@@ -749,7 +749,7 @@
                                 </td>
                                 <td>{{ listing.created_at|date:"M d, Y" }}</td>
                                 <td style="text-align: center;">
-                                    <button class="delete-btn" onclick="confirmDelete({{ listing.id }})"
+                                    <button class="delete-btn" onclick="confirmDelete('{{ listing.id }}')"
                                         title="Delete listing"
                                         style="background: none; border: none; cursor: pointer; color: #dc2626; font-size: 18px; padding: 4px 8px; transition: color 0.2s;">
                                         <i class="fas fa-trash-alt"></i>
@@ -890,9 +890,11 @@
                                 </td>
                                 <td>
                                     {% with winner=listing.bids.last.buyer %}
-                                    <a href="mailto:{{ winner.email }}" class="btn btn-sm btn-outline" style="font-size: 0.75rem;">
+                                    <button onclick="sendReminder(this, '{{ listing.id }}')" 
+                                            class="btn btn-sm btn-outline" 
+                                            style="font-size: 0.75rem;">
                                         <i class="fas fa-envelope"></i> Remind
-                                    </a>
+                                    </button>
                                     {% endwith %}
                                 </td>
                             </tr>
@@ -1031,9 +1033,97 @@
         </div>
     </div>
 
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon warning">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <h3 class="modal-title" id="errorModalTitle">Session Ended</h3>
+            <p class="modal-text" id="errorModalText">Cannot schedule for Morning Session today as it has already ended.</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeErrorModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/assets/js/main.js?v=2"></script>
     <script src="/assets/js/script.js?v=2"></script>
     <script>
+        // Session Validation Logic
+        function closeErrorModal() {
+            document.getElementById('errorModal').style.display = 'none';
+        }
+
+        // Close on Escape key
+        document.addEventListener('keydown', function (event) {
+            if (event.key === "Escape") {
+                closeErrorModal();
+            }
+        });
+
+        // Validation Logic
+        document.addEventListener('DOMContentLoaded', function() {
+            const morningCheckbox = document.querySelector('input[name="morning_session"]');
+            const eveningCheckbox = document.querySelector('input[name="evening_session"]');
+            const dateInput = document.querySelector('input[name="listing_date"]');
+
+            function getTodayString() {
+                const d = new Date();
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            function validateSessions() {
+                const selectedDates = dateInput.value; 
+                if (!selectedDates) return;
+                
+                const dates = selectedDates.split(',').map(d => d.trim());
+                const todayStr = getTodayString();
+                const now = new Date();
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                
+                // Morning Cutoff: 1:30 PM = 13:30 = 810 mins
+                // Evening Cutoff: 6:15 PM = 18:15 = 1095 mins
+                const morningCutoff = 13 * 60 + 30;
+                const eveningCutoff = 18 * 60 + 15;
+
+                if (dates.includes(todayStr)) {
+                    // Check Morning
+                    if (morningCheckbox && morningCheckbox.checked) {
+                        if (currentMinutes > morningCutoff) {
+                            morningCheckbox.checked = false;
+                            showError("Cannot schedule for Morning Session today as it has already ended.");
+                        }
+                    }
+                    // Check Evening
+                    if (eveningCheckbox && eveningCheckbox.checked) {
+                        if (currentMinutes > eveningCutoff) {
+                            eveningCheckbox.checked = false;
+                            showError("Cannot schedule for Evening Session today as it has already ended.");
+                        }
+                    }
+                }
+            }
+
+            function showError(msg) {
+                document.getElementById('errorModalText').textContent = msg;
+                document.getElementById('errorModal').style.display = 'flex';
+            }
+
+            if (morningCheckbox) {
+                morningCheckbox.addEventListener('change', validateSessions);
+            }
+            if (eveningCheckbox) {
+                eveningCheckbox.addEventListener('change', validateSessions);
+            }
+            
+            // Expose to global scope for Flatpickr to call
+            window.validateSessions = validateSessions;
+        });
+
         let targetListingId = null;
 
         function confirmDelete(listingId) {
@@ -1080,18 +1170,17 @@
         });
 
         // Close modal when clicking outside
-        document.getElementById('deleteModal').addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeDeleteModal();
-            }
-        });
-
-        // Close on Escape key
-        document.addEventListener('keydown', function (event) {
-            if (event.key === "Escape") {
-                closeDeleteModal();
-            }
-        });
+        const errorModal = document.getElementById('errorModal');
+        const deleteModal = document.getElementById('deleteModal');
+        
+        window.onclick = function(event) {
+             if (event.target == errorModal) {
+                 closeErrorModal();
+             }
+             if (event.target == deleteModal) {
+                 closeDeleteModal();
+             }
+        }
     </script>
     <!-- Flatpickr JS -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -1102,31 +1191,43 @@
             dateFormat: "Y-m-d",
             minDate: "today",
             defaultDate: ["today"],
-            conjunction: ","
+            conjunction: ", ",
+            onChange: function(selectedDates, dateStr, instance) {
+                // Trigger validation when date changes
+                if (window.validateSessions) {
+                    window.validateSessions();
+                }
+            }
         });
     </script>
-    <!-- Chatbot Container -->
-    {% include 'includes/chatbot.html' %}
+    <!-- Data for Charts -->
+    {{ graph_labels|json_script:"graph-labels-data" }}
+    {{ graph_morning|json_script:"graph-morning-data" }}
+    {{ graph_evening|json_script:"graph-evening-data" }}
 
-    <script src="/assets/js/chatbot.js?v=2"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Data injected from Django via json_script
+            const graphLabels = JSON.parse(document.getElementById('graph-labels-data').textContent);
+            const graphMorning = JSON.parse(document.getElementById('graph-morning-data').textContent);
+            const graphEvening = JSON.parse(document.getElementById('graph-evening-data').textContent);
+
             const ctx = document.getElementById('listingChart');
             if (ctx) {
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: {{ graph_labels|safe }},
+                        labels: graphLabels,
                         datasets: [
                             {
                                 label: 'Morning Session',
-                                data: {{ graph_morning|safe }},
+                                data: graphMorning,
                                 backgroundColor: '#166534',
                                 borderRadius: 4,
                             },
                             {
                                 label: 'Evening Session',
-                                data: {{ graph_evening|safe }},
+                                data: graphEvening,
                                 backgroundColor: '#84cc16',
                                 borderRadius: 4,
                             }
@@ -1171,6 +1272,66 @@
             }
         });
     </script>
-</body>
+    <script>
+        function sendReminder(btn, listingId) {
+            // Confirmation is now optional or handled by UI state, 
+            // but let's keep it simple for now as requested "dont have ask like thsi as shown in the scrnsht"
+            // The user wanted to avoid the MAILTO popup. They might still want a confirmation dialog?
+            // "dont have ask like thsi as shown in the scrnsht" refers to the browser asking which app to open.
+            // So a simple JS confirm is probably fine, or just send it. 
+            // Let's just send it with a loading state to be smooth.
 
+            // Change button state
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            btn.disabled = true;
+
+            fetch(`/api/auth/reminder/send/${listingId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    btn.innerHTML = '<i class="fas fa-check"></i> Sent';
+                    btn.classList.add('btn-success');
+                    btn.classList.remove('btn-outline');
+                    
+                    // Disable permanently for this session
+                    setTimeout(() => {
+                        btn.title = "Reminder sent successfully";
+                    }, 1000);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to send reminder'));
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while sending the reminder.');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
 </html>

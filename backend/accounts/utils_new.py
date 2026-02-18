@@ -188,3 +188,12 @@ def auto_end_expired_auctions():
         # Mark as notified regardless of whether there was a bid (to avoid processing again)
         listing.winner_notified = True
         listing.save()
+
+def render_to_pdf(template_src, context_dict={}):
+    template = get_template(template_src)
+    html  = template.render(context_dict)
+    result = io.BytesIO()
+    pdf = pisa.pisaDocument(io.BytesIO(html.encode("UTF-8")), result)
+    if not pdf.err:
+        return HttpResponse(result.getvalue(), content_type='application/pdf')
+    return None

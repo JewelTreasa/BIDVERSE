@@ -424,6 +424,16 @@
                             <i class="fas fa-cog"></i> Settings
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="?section=notifications" class="nav-link {% if section == 'notifications' %}active{% endif %}">
+                            <i class="fas fa-bell"></i> Notifications
+                        </a>
+                    </li>
+                    <li class="nav-item" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+                        <a href="{% url 'logout' %}" class="nav-link" style="color: #ef4444;">
+                            <i class="fas fa-sign-out-alt"></i> Log Out
+                        </a>
+                    </li>
                 </ul>
             </aside>
 
@@ -476,7 +486,7 @@
                     <div class="stat-card">
                         <div class="stat-icon purple"><i class="fas fa-wallet"></i></div>
                         <div class="stat-info">
-                            <h3>₹0</h3>
+                            <h3>₹{{ total_spend|default:0 }}</h3>
                             <p>Total Spent</p>
                         </div>
                     </div>
@@ -619,7 +629,7 @@
                             <tr>
                                 <td>#{{ order.id }}</td>
                                 <td>{{ order.listing.commodity }}</td>
-                                <td>₹{{ order.listing.current_highest_bid }}</td>
+                                <td>Rs. {{ order.total_amount }}</td>
                                 <td>{{ order.created_at|date:"M d, Y" }}</td>
                                 <td>
                                     <span class="badge" style="background: #e0f2fe; color: #075985; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;">
@@ -628,6 +638,11 @@
                                 </td>
                                 <td>
                                     <a href="{% url 'checkout_auction' order.listing.id %}" class="btn btn-sm btn-outline">View Order</a>
+                                    {% if order.status == 'CONFIRMED' or order.status == 'COMPLETED' %}
+                                    <a href="{% url 'generate_invoice_pdf' order.id %}" class="btn btn-sm btn-outline" title="Download Invoice" style="margin-left: 5px;">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </a>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
@@ -659,7 +674,13 @@
                             {% for listing in won_listings %}
                             <tr>
                                 <td>{{ listing.commodity }}</td>
-                                <td>₹{{ listing.current_highest_bid }}</td>
+                                <td>
+                                    {% if listing.order_obj %}
+                                    Rs. {{ listing.order_obj.total_amount }}
+                                    {% else %}
+                                    Rs. {{ listing.current_highest_bid }}
+                                    {% endif %}
+                                </td>
                                 <td>{{ listing.end_time|date:"M d, Y" }}</td>
                                 <td>
                                     {% if listing.has_order %}
@@ -703,32 +724,69 @@
                     <div class="card-header">
                         <h2>Personal Settings</h2>
                     </div>
-                    <form style="display: grid; gap: 20px;">
+                    <form action="{% url 'settings' %}" method="POST" style="display: grid; gap: 20px;">
+                        {% csrf_token %}
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                             <div class="form-group">
                                 <label style="display: block; margin-bottom: 8px; font-weight: 500;">First Name</label>
-                                <input type="text" value="{{ user.first_name }}"
+                                <input type="text" name="first_name" value="{{ user.first_name }}"
                                     style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                             </div>
                             <div class="form-group">
                                 <label style="display: block; margin-bottom: 8px; font-weight: 500;">Last Name</label>
-                                <input type="text" value="{{ user.last_name }}"
+                                <input type="text" name="last_name" value="{{ user.last_name }}"
                                     style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                             </div>
                         </div>
                         <div class="form-group">
                             <label style="display: block; margin-bottom: 8px; font-weight: 500;">Email Address</label>
-                            <input type="email" value="{{ user.email }}" disabled
-                                style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 8px; background: #fafafa;">
+                            <input type="email" name="email" value="{{ user.email }}"
+                                style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                         </div>
                         <div class="form-group">
                             <label style="display: block; margin-bottom: 8px; font-weight: 500;">Contact Number</label>
-                            <input type="text" value="{{ user.phone|default:'' }}"
+                            <input type="text" name="phone" value="{{ user.phone|default:'' }}"
                                 style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                         </div>
-                        <button type="button" class="btn btn-primary" style="background: #2563eb; padding: 14px;">Save
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Address</label>
+                            <textarea name="address" rows="3"
+                                style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit;">{{ user.address|default:'' }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="background: #2563eb; padding: 14px;">Save
                             Changes</button>
                     </form>
+                </div>
+
+                {% elif section == 'notifications' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>Notifications</h2>
+                        <!-- Optional: Mark all read button can go here -->
+                    </div>
+                    <div class="notification-list">
+                        {% for notif in notifications_list %}
+                        <div class="notification-item" style="padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 15px; {% if not notif.is_read %}background-color: #f0fdf4;{% endif %}">
+                            <div class="notif-icon" style="width: 40px; height: 40px; border-radius: 50%; background: #dcfce7; color: #166534; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                            <div class="notif-content" style="flex: 1;">
+                                <p style="margin: 0; color: #333;">{{ notif.message }}</p>
+                                <small style="color: #666;">{{ notif.created_at|timesince }} ago</small>
+                            </div>
+                            {% if not notif.is_read %}
+                            <div class="notif-action">
+                                <span style="width: 10px; height: 10px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% empty %}
+                        <div style="text-align: center; padding: 40px; color: #666;">
+                            <i class="fas fa-bell-slash" style="font-size: 32px; color: #ddd; margin-bottom: 15px;"></i>
+                            <p>No notifications yet.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
 
                 {% else %}
@@ -786,9 +844,14 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <script src="/assets/js/main.js?v=2"></script>
-    <script src="/assets/js/script.js?v=2"></script>
+    <!-- Scripts for Dropdowns and Chatbot -->
+    <script>
+        // Make CSRF token available globally for AJAX requests
+        window.CSRF_TOKEN = '{{ csrf_token }}';
+    </script>
+    <script src="/assets/js/script.js"></script>
     <script src="/assets/js/chatbot.js?v=2"></script>
+    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const ctx = document.getElementById('biddingChart');

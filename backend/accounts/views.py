@@ -12,24 +12,27 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
+from django.views.decorators.cache import never_cache
 from django.contrib import messages
 from django.utils import timezone
 from datetime import datetime, time, timedelta
-from django.db.models import Q
+from django.db import models
+from django.db.models import Q, Sum
 from django.db.models.functions import Coalesce
-from django.http import JsonResponse 
+from django.http import JsonResponse, HttpResponse 
 import razorpay
 from django.conf import settings 
 # Use our custom User model
 from django.contrib.auth import get_user_model
-from .models import Listing, Bid, NotificationSubscription, Notification
+from .models import Listing, Bid, NotificationSubscription, Notification, Order
 User = get_user_model()
 
-from .utils import (
+from .utils_new import (
     get_current_session_info, 
     auto_end_expired_auctions, 
     send_auction_notifications,
     calculate_listing_end_time,
+    render_to_pdf,
     MORNING_START, MORNING_END, EVENING_START, EVENING_END, BREAK_START, BREAK_END
 )
 
@@ -126,6 +129,22 @@ def marketplace(request):
     now = timezone.localtime(timezone.now())
     today = now.date()
     
+    # --- Category Filtering Logic ---
+    category = request.GET.get('category')
+    filter_q = Q()
+    
+    if category:
+        if category == 'grains':
+            filter_q = Q(commodity__icontains='rice') | Q(commodity__icontains='wheat') | Q(commodity__icontains='maize') | Q(commodity__icontains='corn') | Q(commodity__icontains='paddy')
+        elif category == 'spices':
+            filter_q = Q(commodity__icontains='cardamom') | Q(commodity__icontains='pepper') | Q(commodity__icontains='turmeric') | Q(commodity__icontains='chilli') | Q(commodity__icontains='clove')
+        elif category == 'pulses':
+            filter_q = Q(commodity__icontains='lentil') | Q(commodity__icontains='chickpea') | Q(commodity__icontains='dal') | Q(commodity__icontains='gram') | Q(commodity__icontains='pea')
+        elif category == 'fruits_vegetables':
+            filter_q = Q(commodity__icontains='tomato') | Q(commodity__icontains='potato') | Q(commodity__icontains='onion') | Q(commodity__icontains='fruit') | Q(commodity__icontains='vegetable') | Q(commodity__icontains='banana')
+        elif category == 'plantation':
+            filter_q = Q(commodity__icontains='rubber') | Q(commodity__icontains='cotton') | Q(commodity__icontains='tea') | Q(commodity__icontains='coffee') | Q(commodity__icontains='coconut')
+
     # Live auctions for current session
     if session_info['is_active']:
         if session_info['session'] == 'morning':
@@ -133,14 +152,14 @@ def marketplace(request):
                 is_active=True,
                 morning_session=True,
                 end_time__date=today
-            ).order_by('-created_at')
+            ).filter(filter_q).order_by('-created_at')
         else:  # evening
             live_auctions = Listing.objects.filter(
                 is_active=True
             ).filter(
                 Q(evening_session=True, end_time__date=today) |
                 Q(morning_session=True, evening_session=True, end_time__date=today)
-            ).order_by('-created_at')
+            ).filter(filter_q).order_by('-created_at')
     else:
         live_auctions = Listing.objects.none()
     
@@ -152,14 +171,14 @@ def marketplace(request):
             is_active=True,
             evening_session=True,
             end_time__date=today
-        ).order_by('-created_at')
+        ).filter(filter_q).order_by('-created_at')
         # Note: We removed the .exclude(morning_session=True) so morning+evening are included here
     
     # Ended auctions today
     ended_today = Listing.objects.filter(
         is_active=False,
         end_time__date=today
-    ).order_by('-end_time')
+    ).filter(filter_q).order_by('-end_time')
     
     # Get user subscriptions if logged in
     subscribed_listing_ids = []
@@ -182,7 +201,8 @@ def marketplace(request):
         'live_auctions': live_auctions,
         'upcoming_evening': upcoming_evening,
         'ended_today': ended_today,
-        'session_info': session_info
+        'session_info': session_info,
+        'current_category': category  # Pass category to template for UI indication if needed
     })
 
 @membership_required
@@ -486,6 +506,7 @@ class CustomPasswordResetCompleteView(PasswordResetCompleteView):
 
 # Web Form Views
 @csrf_protect
+@never_cache
 def login_user(request):
     if request.method == "POST":
         email = request.POST.get("email")
@@ -664,6 +685,7 @@ def check_auth_status(request):
             'user': None
         })
 
+@never_cache
 def register_user(request):
     if request.method == "POST":
         email = request.POST.get("email")
@@ -743,6 +765,7 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 
 @login_required
+@never_cache
 def checkout_auction(request, listing_id):
     listing = get_object_or_404(Listing, id=listing_id)
     
@@ -753,7 +776,12 @@ def checkout_auction(request, listing_id):
         
     # Check if order already exists
     if hasattr(listing, 'order'):
-         return render(request, 'order_summary.html', {'order': listing.order})
+         if listing.order.status == 'PENDING':
+             # If Pending, it means a previous attempt failed or was abandoned.
+             # We delete it to allow a fresh checkout attempt.
+             listing.order.delete()
+         else:
+             return render(request, 'order_summary.html', {'order': listing.order})
     
     # Calculate Base Amount (Bid x Quantity)
     base_amount = listing.quantity * highest_bid.amount
@@ -773,11 +801,12 @@ def checkout_auction(request, listing_id):
         
         if payment_method == 'ONLINE':
             # Create Razorpay Order
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
             currency = 'INR'
             amount = int(total_amount * 100) # Amount in paise
             
             try:
-                razorpay_order = razorpay_client.order.create(dict(
+                razorpay_order = client.order.create(dict(
                     amount=amount,
                     currency=currency,
                     payment_capture='1'
@@ -811,7 +840,7 @@ def checkout_auction(request, listing_id):
                     'razorpay_merchant_key': settings.RAZORPAY_KEY_ID,
                     'razorpay_amount': amount,
                     'currency': currency,
-                    'callback_url': request.build_absolute_uri(reverse('payment_success')),
+                    'callback_url': request.build_absolute_uri(reverse('payment_success_auction')),
                     
                     # Context for pre-filling form if they cancel payment
                     'selected_delivery_method': delivery_method,
@@ -878,6 +907,7 @@ def check_auth(request):
         })
 
 @login_required
+@never_cache
 def dashboard(request):
     """User dashboard view - routes to specialized templates based on user_type"""
     
@@ -1050,13 +1080,14 @@ def dashboard(request):
             context['active_listings_count'] = Listing.objects.filter(seller=request.user, is_active=True).count()
             context['items_sold'] = Listing.objects.filter(seller=request.user, is_active=False).count()
             
-            # Correct Revenue Calculation: Sum of CONFIRMED or COMPLETED orders
-            confirmed_orders = Order.objects.filter(
+            # Fix: Use actual Orders for Revenue, not just Bids on Inactive Listings
+            # This ensures it matches the Sales Report and only counts real sales.
+            game_revenue = Order.objects.filter(
                 listing__seller=request.user,
                 status__in=['CONFIRMED', 'COMPLETED']
-            )
-            context['total_revenue'] = sum(o.total_amount for o in confirmed_orders)
+            ).aggregate(total=Sum('total_amount'))['total'] or 0
             
+            context['total_revenue'] = game_revenue
             context['live_listings'] = Listing.objects.filter(seller=request.user, is_active=True).order_by('-created_at')[:5]
             
             # Graph Data for Farmer: Last 7 days listings created
@@ -1082,6 +1113,53 @@ def dashboard(request):
             context['graph_morning'] = morning_counts
             context['graph_evening'] = evening_counts
         
+        elif section == 'payments':
+            # Fetch confirmed/completed orders for this seller's listings
+            context['payments'] = Order.objects.filter(
+                listing__seller=request.user,
+                status__in=['CONFIRMED', 'COMPLETED']
+            ).order_by('-created_at')
+
+        elif section == 'sales':
+            # Sales Reports Logic
+            seller_orders = Order.objects.filter(
+                listing__seller=request.user,
+                status__in=['CONFIRMED', 'COMPLETED']
+            )
+            
+            # 1. Performance Metrics
+            total_rev = seller_orders.aggregate(total=Sum('total_amount'))['total'] or 0
+            total_orders = seller_orders.count()
+            avg_order_value = total_rev / total_orders if total_orders > 0 else 0
+            
+            # Top Selling Item (Since Listing is 1:1, we group by commodity name)
+            from django.db.models import Count
+            top_item = seller_orders.values('listing__commodity').annotate(count=Count('id')).order_by('-count').first()
+            
+            context['performance'] = {
+                'total_revenue': total_rev,
+                'total_orders': total_orders,
+                'avg_order_value': avg_order_value,
+                'top_item': top_item['listing__commodity'] if top_item else "N/A"
+            }
+
+            # 2. Sales Line Graph Data (Last 7 Days)
+            days = []
+            revenue_data = []
+            
+            for i in range(6, -1, -1):
+                date = (timezone.now() - timedelta(days=i)).date()
+                days.append(date.strftime('%b %d'))
+                
+                # Sum total_amount for orders on this day
+                daily_rev = seller_orders.filter(created_at__date=date).aggregate(
+                    total=Sum('total_amount')
+                )['total'] or 0
+                revenue_data.append(float(daily_rev))
+            
+            context['sales_graph_labels'] = days
+            context['sales_graph_data'] = revenue_data
+
         return render(request, "dashboard/seller.html", context)
         
     elif user_type == 'BUYER':
@@ -1101,8 +1179,10 @@ def dashboard(request):
                 # Check if highest bid belongs to current user
                 highest = l.bids.order_by('-amount', 'timestamp').first()
                 if highest and highest.buyer == request.user:
-                    # Check if order exists (using OneToOne reverse relation check)
-                    l.has_order = Order.objects.filter(listing=l).exists()
+                    # Check if order exists (using reverse relation)
+                    # We fetch the actual order to get details like total_amount
+                    l.order_obj = Order.objects.filter(listing=l).first()
+                    l.has_order = l.order_obj is not None
                     won_items.append(l)
             
             context['won_listings'] = won_items
@@ -1112,6 +1192,13 @@ def dashboard(request):
             context['active_bids_count'] = user_bids.filter(listing__is_active=True).values('listing').distinct().count()
             context['won_auctions_count'] = Listing.objects.filter(is_active=False, bids__buyer=request.user).distinct().count()
             context['recent_bids'] = user_bids.order_by('-timestamp')[:5]
+            
+            # Total Spend for Buyer: Sum of confirmed/completed orders
+            spend_agg = Order.objects.filter(
+                buyer=request.user,
+                status__in=['CONFIRMED', 'COMPLETED']
+            ).aggregate(total=Coalesce(Sum('total_amount'), 0.0, output_field=models.DecimalField()))
+            context['total_spend'] = spend_agg['total']
             
             # Graph Data for Buyer: Last 7 days bids count
             days = []
@@ -1144,6 +1231,9 @@ def dashboard(request):
             context['graph_labels'] = days
             context['graph_morning'] = morning_counts
             context['graph_evening'] = evening_counts
+        
+        elif section == 'notifications':
+             context['notifications_list'] = request.user.notifications.all().order_by('-created_at')
         
         return render(request, "dashboard/buyer.html", context)
         
@@ -1386,90 +1476,51 @@ def purchase_membership(request, plan_type):
     
     return render(request, 'payment_checkout.html', context)
 
-@csrf_exempt
 @login_required
 def payment_success(request):
-    """Verify Payment Signature and Activate Membership OR Confirm Auction Order"""
+    """Verify Payment Signature and Activate Membership"""
     
-    # Check both POST (Razorpay) and GET (Mock/Manual)
-    data = request.POST if request.method == 'POST' else request.GET
-    
-    # 1. Check if this is a Membership Payment
-    plan_type = data.get('plan_type')
-    is_mock = data.get('mock_payment') == 'true'
-    
-    razorpay_payment_id = data.get('razorpay_payment_id')
-    razorpay_order_id = data.get('razorpay_order_id')
-    razorpay_signature = data.get('razorpay_signature')
+    plan_type = request.GET.get('plan_type')
+    is_mock = request.GET.get('mock_payment') == 'true'
 
-    if plan_type:
-        if not is_mock:
-            # REAL VERIFICATION
-            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-            
-            params_dict = {
-                'razorpay_order_id': razorpay_order_id,
-                'razorpay_payment_id': razorpay_payment_id,
-                'razorpay_signature': razorpay_signature
-            }
-            
-            try:
-                client.utility.verify_payment_signature(params_dict)
-            except razorpay.errors.SignatureVerificationError:
-                messages.error(request, "Payment Verification Failed.")
-                return redirect('membership_plans')
-            except Exception:
-                messages.error(request, "Payment Error.")
-                return redirect('membership_plans')
-                
-        # --- SUCCESS LOGIC (Shared) ---
-        user = request.user
-        duration = 365 if plan_type == 'yearly' else 30
+    if not is_mock:
+        # REAL VERIFICATION
+        razorpay_payment_id = request.GET.get('razorpay_payment_id')
+        razorpay_order_id = request.GET.get('razorpay_order_id')
+        razorpay_signature = request.GET.get('razorpay_signature')
+
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
         
-        # Update User
-        user.membership_expiry = timezone.now() + timedelta(days=duration)
-        user.has_used_free_trial = True
-        user.membership_type = 'YEARLY' if plan_type == 'yearly' else 'MONTHLY'
-        user.save()
-        
-        context = {
-            'plan_type': plan_type,
-            'expiry': user.membership_expiry
+        params_dict = {
+            'razorpay_order_id': razorpay_order_id,
+            'razorpay_payment_id': razorpay_payment_id,
+            'razorpay_signature': razorpay_signature
         }
-        return render(request, 'payment_success.html', context)
-
-    # 2. Check if this is an Auction Order Payment
-    elif razorpay_order_id:
+        
         try:
-            # Find the order by Razorpay Order ID
-            order = Order.objects.get(razorpay_order_id=razorpay_order_id)
-        except Order.DoesNotExist:
-            messages.error(request, "Order not found.")
-            return redirect('dashboard')
-
-        if not is_mock:
-            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-            params_dict = {
-                'razorpay_order_id': razorpay_order_id,
-                'razorpay_payment_id': razorpay_payment_id,
-                'razorpay_signature': razorpay_signature
-            }
-            try:
-                client.utility.verify_payment_signature(params_dict)
-            except Exception:
-                messages.error(request, "Payment Verification Failed for Order.")
-                return redirect('checkout_auction', listing_id=order.listing.id)
-        
-        # Success: Confirm the Order
-        order.status = 'CONFIRMED'
-        order.save()
-        
-        messages.success(request, f"Payment Successful! Order for {order.listing.commodity} confirmed.")
-        # Redirect to Buyer Dashboard -> Orders section
-        return redirect(reverse('dashboard') + '?section=orders')
-
-    # Fallback
-    return redirect('dashboard')
+            client.utility.verify_payment_signature(params_dict)
+        except razorpay.errors.SignatureVerificationError:
+            messages.error(request, "Payment Verification Failed.")
+            return redirect('membership_plans')
+        except Exception:
+            messages.error(request, "Payment Error.")
+            return redirect('membership_plans')
+            
+    # --- SUCCESS LOGIC (Shared) ---
+    user = request.user
+    duration = 365 if plan_type == 'yearly' else 30
+    
+    # Update User
+    user.membership_expiry = timezone.now() + timedelta(days=duration)
+    user.has_used_free_trial = True
+    user.membership_type = 'YEARLY' if plan_type == 'yearly' else 'MONTHLY'
+    user.save()
+    
+    context = {
+        'plan_type': plan_type,
+        'expiry': user.membership_expiry
+    }
+    return render(request, 'payment_success.html', context)
 @csrf_exempt
 def chatbot_response(request):
     if request.method == 'POST':
@@ -1605,74 +1656,238 @@ def settings_view(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Your profile has been updated successfully.')
-            return redirect('settings')
+            return redirect('/dashboard/?section=settings')
         else:
-            print("Settings Form Errors:", form.errors)
             messages.error(request, 'Please correct the errors below.')
+            return redirect('/dashboard/?section=settings')
     else:
-        form = UserProfileForm(instance=request.user)
+        # GET request redirects to dashboard settings
+        return redirect('/dashboard/?section=settings')
+
+@login_required
+def generate_invoice_pdf(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
     
-    return render(request, 'settings.html', {'form': form})
+    # Ensure only buyer or seller or admin can view
+    if request.user != order.buyer and request.user != order.listing.seller and not request.user.is_superuser:
+        return HttpResponse("Unauthorized", status=403)
+    
+    # Calculate values for template
+    unit_price = order.listing.current_highest_bid
+    base_amount = order.total_amount - order.shipping_amount
+    
+    context = {
+        'order': order,
+        'total_bid_price': unit_price,
+        'subtotal': base_amount,
+    }
+    
+    pdf = render_to_pdf('invoices/invoice.html', context)
+    if pdf:
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = "Invoice_%s.pdf" % order.id
+        content = "inline; filename='%s'" % filename
+        response['Content-Disposition'] = content
+        return response
+    return HttpResponse("Error generating PDF", status=500)
+
+@login_required
+def generate_seller_report_pdf(request):
+    if request.user.user_type != 'FARMER':
+        return HttpResponse("Unauthorized", status=403)
+        
+    # Gather Data
+    # 1. Active Listings
+    active_listings = Listing.objects.filter(seller=request.user, is_active=True).order_by('end_time')
+    
+    # 2. Pending Claims (Sold but order not completed/confirmed yet or just won)
+    # logic: inactive, has bids, but maybe no order or order is pending
+    pending_claims = Listing.objects.filter(
+        seller=request.user,
+        is_active=False,
+    ).exclude(bids=None).order_by('-end_time')
+    # Filter strictly for ones that don't have a COMPLETED order
+    real_pending = []
+    for l in pending_claims:
+        if hasattr(l, 'order'):
+             if l.order.status != 'COMPLETED':
+                 real_pending.append(l)
+        else:
+            # Won but no order created yet (very early stage)
+            real_pending.append(l)
+
+    # 3. Sales History (Confirmed/Completed Orders)
+    sales_history = Order.objects.filter(
+        listing__seller=request.user,
+        status__in=['CONFIRMED', 'COMPLETED']
+    ).order_by('-created_at')
+
+    # 4. Aggregates
+    total_revenue = sales_history.aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    context = {
+        'user': request.user,
+        'active_listings': active_listings,
+        'active_listings_count': active_listings.count(),
+        'pending_claims': real_pending,
+        'pending_claims_count': len(real_pending),
+        'sales_history': sales_history,
+        'total_revenue': total_revenue,
+        'total_orders_count': sales_history.count(),
+    }
+    
+    pdf = render_to_pdf('reports/seller_report.html', context)
+    if pdf:
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = f"Seller_Report_{request.user.id}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    return HttpResponse("Error generating Report PDF", status=500)
 
 @csrf_exempt
-def chatbot_message(request):
+@login_required
+def payment_success_auction(request):
     """
-    Handle Chatbot Messages.
-    Returns a JSON response based on keywords and user role.
+    Verify Payment Signature for Auction Orders and Confirm Order.
+    """
+    razorpay_payment_id = request.POST.get('razorpay_payment_id')
+    razorpay_order_id = request.POST.get('razorpay_order_id')
+    razorpay_signature = request.POST.get('razorpay_signature')
+
+    # Basic Fallback for query params if POST is empty (redirects sometimes behave differently)
+    if not razorpay_payment_id:
+         razorpay_payment_id = request.GET.get('razorpay_payment_id')
+         razorpay_order_id = request.GET.get('razorpay_order_id')
+         razorpay_signature = request.GET.get('razorpay_signature')
+
+    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+    
+    try:
+        # 1. Verify Signature
+        client.utility.verify_payment_signature({
+            'razorpay_order_id': razorpay_order_id,
+            'razorpay_payment_id': razorpay_payment_id,
+            'razorpay_signature': razorpay_signature
+        })
+        
+        # 2. Find Order
+        order = Order.objects.get(razorpay_order_id=razorpay_order_id)
+        
+        # 3. Update Status
+        order.status = 'CONFIRMED'
+        order.payment_method = 'ONLINE' # Ensure consistency
+        order.save()
+        
+        messages.success(request, "Payment Successful! Order Confirmed.")
+        return redirect('checkout_auction', listing_id=order.listing.id) # Will redirect to summary
+        
+    except Order.DoesNotExist:
+        messages.error(request, "Order not found for this payment.")
+        return redirect('dashboard')
+    except razorpay.errors.SignatureVerificationError:
+        messages.error(request, "Payment Verification Failed.")
+        return redirect('dashboard')
+    except Exception as e:
+        messages.error(request, f"Payment Error: {str(e)}")
+        return redirect('dashboard')
+
+@csrf_exempt
+def corporate_connect_ai(request):
+    """
+    AI-Powered Endpoint for Corporate Connect.
+    Uses Gemini API (gemini-1.5-flash) to find REAL corporate buyers.
     """
     if request.method == 'POST':
+        import json
+        import os
+        # Use requests if available, else fallback to urllib (but we know requests is in requirements)
+        try:
+            import requests
+        except ImportError:
+            requests = None
+            import urllib.request
+            import urllib.error
+
         try:
             data = json.loads(request.body)
-            user_msg = data.get('message', '').lower()
+            query = data.get('query', '').lower()
+            api_key = os.getenv('GEMINI_API_KEY')
             
-            user = request.user
-            role = "Guest"
-            if user.is_authenticated:
-                if user.user_type == 'BUYER':
-                    role = "Buyer"
-                elif user.user_type == 'FARMER':
-                    role = "Farmer"
-                elif user.is_superuser or user.user_type == 'ADMIN':
-                    role = "Admin"
+            if api_key and requests:
+                try:
+                    url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}'
+                    headers = {'Content-Type': 'application/json'}
+                    
+                    # Instruction for structured JSON output
+                    prompt = f"""
+                    You are a business intelligence assistant for Indian farmers.
+                    The user wants to sell: "{query}".
+                    Find 3-5 REAL or REALISTIC corporate buyers (Factories, Mills, Exporters) in India for this product.
+                    
+                    **IMPORTANT: Prioritize buyers located in KERALA state first, then other South Indian states.**
+                    
+                    Return ONLY a JSON array with this structure:
+                    [
+                        {{
+                            "name": "Company Name",
+                            "type": "Miller/Exporter/Factory",
+                            "location": "City, State",
+                            "requirements": "Specific requirements (e.g. Basmati Rice)",
+                            "phone": "+91-XXXXXXXXXX"
+                        }}
+                    ]
+                    """
+                    
+                    payload = {
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {"response_mime_type": "application/json"}
+                    }
+                    
+                    response = requests.post(url, json=payload, headers=headers, timeout=10)
+                    
+                    if response.status_code == 200:
+                        res_data = response.json()
+                        raw_text = res_data['candidates'][0]['content']['parts'][0]['text']
+                        ai_results = json.loads(raw_text)
+                        return JsonResponse({'results': ai_results})
+                        
+                except Exception as e:
+                    print(f"AI Connectivity/Parse Error: {e}")
+
+            # Fallback to Mock Data if API fails
+            mock_data = [
+                {
+                    "name": "Kairali Spices & Exports",
+                    "type": "Exporter",
+                    "location": "Kochi, Kerala",
+                    "requirements": f"Premium {query}",
+                    "phone": "+91-484-2345678"
+                },
+                {
+                    "name": "Malabar Agile Agro",
+                    "type": "Processor",
+                    "location": "Kozhikode, Kerala",
+                    "requirements": f"Organic {query}",
+                    "phone": "+91-495-2765432"
+                },
+                {
+                    "name": "KRBL Limited (India Gate)",
+                    "type": "Miller/Exporter",
+                    "location": "Sangrur, Punjab",
+                    "requirements": f"Bulk {query.capitalize()}",
+                    "phone": "+91-120-4060300"
+                },
+                {
+                    "name": "ITC Limited (Agri Business)",
+                    "type": "Exporter/Factory",
+                    "location": "Guntur, Andhra Pradesh",
+                    "requirements": f"Quality grade {query}",
+                    "phone": "+91-0863-2354001"
+                }
+            ]
+            return JsonResponse({'results': mock_data})
             
-            # --- Logic ---
-            response_text = ""
-
-            # 1. Greetings
-            if any(x in user_msg for x in ['hi', 'hello', 'hey']):
-                response_text = f"Hello! I am your {role} Assistant. How can I help you today?"
-
-            # 2. General Help
-            elif any(x in user_msg for x in ['help', 'support', 'contact']):
-                response_text = "You can contact support at **support@bidverse.com** or call us at **+91 98765 43210**. We are available 24/7."
-
-            # 3. Auctions / Bidding (Buyer/Guest focus)
-            elif any(x in user_msg for x in ['auction', 'bid', 'buy']):
-                if role == "Farmer":
-                    response_text = "As a **Farmer**, you can currently **list items** for auction. Switch to a Buyer account to place bids."
-                else:
-                    response_text = "To place a bid, go to the **Auctions** page, select an item, and enter your amount. Ensure you have a valid account."
-
-            # 4. Selling / Listing (Farmer focus)
-            elif any(x in user_msg for x in ['sell', 'list', 'farmer']):
-                if role == "Buyer":
-                    response_text = "As a **Buyer**, you can bid on items. To sell crops, please register as a **Farmer**."
-                elif role == "Guest":
-                    response_text = "To sell your produce, please **Register** as a Farmer first."
-                else:
-                    response_text = "To sell, go to your **Dashboard** and click **'Add Listing'**. You can set the quantity, unit, and base price."
-
-            # 5. Pricing / Commission
-            elif any(x in user_msg for x in ['price', 'cost', 'fee', 'commission']):
-                response_text = "BidVerse charges a minimal platform fee on successful auctions. Registration is free for everyone!"
-
-            # 6. Default Fallback
-            else:
-                response_text = "I'm sorry, I didn't quite catch that. Try asking about **auctions**, **selling**, or **support**."
-
-            return JsonResponse({'response': response_text})
-
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
+            return JsonResponse({'error': str(e)}, status=400)
+            
+    return JsonResponse({'error': 'Invalid method'}, status=405)

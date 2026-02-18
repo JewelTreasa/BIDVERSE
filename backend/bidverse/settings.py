@@ -192,6 +192,11 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 
 # CSRF Settings
 CSRF_FAILURE_VIEW = 'accounts.views.csrf_failure'
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+
 
 # Razorpay Settings
 # Razorpay Settings

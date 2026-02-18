@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice - #{{ order.id }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: Helvetica, sans-serif;
+            color: #333;
+            line-height: 1.5;
+        }
+        .header {
+            width: 100%;
+            border-bottom: 2px solid #2e7d32;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        .logo span {
+            color: #333;
+        }
+        .invoice-title {
+            float: right;
+            font-size: 24px;
+            color: #666;
+            margin-top: -30px; /* Adjust based on logo height */
+        }
+        .details-grid {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .details-col {
+            width: 48%;
+            display: inline-block;
+            vertical-align: top;
+        }
+        .details-title {
+            font-weight: bold;
+            color: #2e7d32;
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .total-row td {
+            border-top: 2px solid #2e7d32;
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .seal-container {
+            margin-top: 50px;
+            text-align: right;
+            position: relative;
+        }
+        .seal {
+            display: inline-block;
+            width: 120px;
+            height: 120px;
+            border: 3px solid #2e7d32;
+            border-radius: 50%;
+            color: #2e7d32;
+            text-align: center;
+            padding-top: 35px;
+            font-weight: bold;
+            font-size: 14px;
+            transform: rotate(-15deg);
+            opacity: 0.8;
+            box-sizing: border-box;
+        }
+        .seal-inner {
+            font-size: 10px;
+            display: block;
+            margin-top: 5px;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">Bid<span>Verse</span></div>
+        <div class="invoice-title">INVOICE</div>
+    </div>
+
+    <div class="details-grid">
+        <div class="details-col">
+            <div class="details-title">Seller Details</div>
+            <strong>{{ order.listing.seller.get_full_name|default:order.listing.seller.email }}</strong><br>
+            {% if order.listing.seller.business_name %}
+                {{ order.listing.seller.business_name }}<br>
+            {% endif %}
+            {% if order.listing.seller.address %}
+                {{ order.listing.seller.address|linebreaksbr }}<br>
+            {% endif %}
+            {% if order.listing.seller.phone %}
+                Phone: {{ order.listing.seller.phone }}<br>
+            {% endif %}
+            {% if order.listing.seller.gstin %}
+                GSTIN: {{ order.listing.seller.gstin }}
+            {% endif %}
+        </div>
+        <div class="details-col" style="margin-left: 4%;">
+            <div class="details-title">Invoice To</div>
+            <strong>{{ order.buyer.get_full_name|default:order.buyer.email }}</strong><br>
+            {{ order.shipping_address|linebreaksbr }}<br>
+            Phone: {{ order.buyer.phone }}
+            <br><br>
+            <strong>Invoice #:</strong> INV-{{ order.id }}<br>
+            <strong>Date:</strong> {{ order.created_at|date:"F d, Y" }}
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Item Description</th>
+                <th>Quantity</th>
+                <th>Rate</th>
+                <th style="text-align: right;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>{{ order.listing.commodity }}</td>
+                <td>{{ order.listing.quantity }} {{ order.listing.unit }}</td>
+                <td>Rs. {{ total_bid_price }}</td>
+                <td style="text-align: right;">Rs. {{ subtotal }}</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td>Shipping Charges</td>
+                <td>-</td>
+                <td>-</td>
+                <td style="text-align: right;">Rs. {{ order.shipping_amount }}</td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="4" style="text-align: right;">Total Amount</td>
+                <td style="text-align: right;">Rs. {{ order.total_amount }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="seal-container">
+        <div class="seal">
+            BIDVERSE<br>
+            Authorized<br>
+            <span class="seal-inner">Digital Stamp</span>
+        </div>
+        <div style="margin-top: 10px; font-size: 12px; color: #666;">
+            Authorized Signature
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Thank you for doing business with us!</p>
+        <p>This is a computer-generated invoice and does not require a physical signature.</p>
+        <p>BidVerse - Connecting Farmers & Buyers</p>
+    </div>
+</body>
+</html>

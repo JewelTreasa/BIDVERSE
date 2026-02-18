@@ -519,6 +519,9 @@
                         <li class="nav-item"><a href="?section=payments"
                                 class="nav-link {% if section == 'payments' %}active{% endif %}"><i
                                     class="fas fa-wallet"></i> Payments</a></li>
+                        <li class="nav-item"><a href="?section=corporate_connect"
+                                class="nav-link {% if section == 'corporate_connect' %}active{% endif %}">
+                                <i class="fas fa-handshake"></i> Corporate Connect <span class="badge bg-warning text-dark ms-2" style="font-size: 10px;">New</span></a></li>
                         <li class="nav-item"><a href="?section=settings"
                                 class="nav-link {% if section == 'settings' %}active{% endif %}"><i class="fas fa-cog"></i>
                                 Settings</a></li>
@@ -909,10 +912,10 @@
                     </table>
                 </div>
 
-                {% elif section == 'sales' %}
+                {% elif section == 'payments' %}
                 <div class="content-card">
                     <div class="card-header">
-                        <h2>Sales History</h2>
+                        <h2>Payments Received</h2>
                     </div>
                     <table class="action-table">
                         <thead>
@@ -922,33 +925,24 @@
                                 <th>Buyer</th>
                                 <th>Amount</th>
                                 <th>Method</th>
-                                <th>Shipping/Pickup Details</th>
                                 <th>Status</th>
                                 <th>Date</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for order in orders %}
+                            {% for order in payments %}
                             <tr>
                                 <td>#{{ order.id }}</td>
                                 <td>{{ order.listing.commodity }}</td>
                                 <td>
-                                    <strong>{{ order.buyer.get_full_name|default:order.buyer.email }}</strong><br>
-                                    <span style="font-size: 0.8rem; color: #666;">{{ order.buyer.phone|default:"-" }}</span>
+                                    <strong>{{ order.buyer.get_full_name|default:order.buyer.email }}</strong>
                                 </td>
-                                <td>₹{{ order.listing.current_highest_bid }}</td>
+                                <td>Rs. {{ order.total_amount }}</td>
                                 <td>
-                                    {% if order.delivery_method == 'PICKUP' %}
-                                    <span class="badge" style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Pickup from Farm</span>
+                                    {% if order.payment_method == 'COD' %}
+                                    <span class="badge" style="background: #fff7ed; color: #c2410c; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Cash on Delivery</span>
                                     {% else %}
-                                    <span class="badge" style="background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Home Delivery</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if order.delivery_method == 'DELIVERY' %}
-                                        <div style="font-size: 0.85rem; max-width: 200px; color: #333;">{{ order.shipping_address }}</div>
-                                    {% else %}
-                                        <span style="color: #666; font-size: 0.85rem;">Buyer will collect</span>
+                                    <span class="badge" style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">Online</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -960,9 +954,8 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
-                                    No completed sales yet. <a href="?section=add_listing"
-                                        style="color: var(--primary-green);">Create your first listing!</a>
+                                <td colspan="7" style="text-align: center; padding: 40px; color: #666;">
+                                    No payments received yet.
                                 </td>
                             </tr>
                             {% endfor %}
@@ -970,37 +963,263 @@
                     </table>
                 </div>
 
+                {% elif section == 'sales' %}
+                <!-- Performance Cards -->
+                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-icon orange"><i class="fas fa-chart-line"></i></div>
+                        <div class="stat-info">
+                            <h3>Rs. {{ performance.total_revenue|floatformat:2 }}</h3>
+                            <p>Total Revenue</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="fas fa-shopping-cart"></i></div>
+                        <div class="stat-info">
+                            <h3>{{ performance.total_orders }}</h3>
+                            <p>Total Orders</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i class="fas fa-coins"></i></div>
+                        <div class="stat-info">
+                            <h3>Rs. {{ performance.avg_order_value|floatformat:2 }}</h3>
+                            <p>Avg Order Value</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales Graph -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>Revenue Overview (Last 7 Days)</h2>
+                        <a href="{% url 'generate_seller_report' %}" class="btn btn-outline btn-sm" target="_blank">
+                            <i class="fas fa-file-pdf"></i> Download Full Report
+                        </a>
+                    </div>
+                    <div style="height: 350px; position: relative;">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                </div>
+
                 {% elif section == 'settings' %}
                 <div class="content-card">
                     <div class="card-header">
                         <h2>Account Settings</h2>
                     </div>
-                    <form style="display: grid; gap: 20px;">
+                    <form action="{% url 'settings' %}" method="POST" style="display: grid; gap: 20px;">
+                        {% csrf_token %}
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                             <div class="form-group">
                                 <label style="display: block; margin-bottom: 8px; font-weight: 500;">First Name</label>
-                                <input type="text" value="{{ user.first_name }}"
+                                <input type="text" name="first_name" value="{{ user.first_name }}"
                                     style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                             </div>
                             <div class="form-group">
                                 <label style="display: block; margin-bottom: 8px; font-weight: 500;">Last Name</label>
-                                <input type="text" value="{{ user.last_name }}"
+                                <input type="text" name="last_name" value="{{ user.last_name }}"
                                     style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                             </div>
                         </div>
                         <div class="form-group">
                             <label style="display: block; margin-bottom: 8px; font-weight: 500;">Email Address</label>
-                            <input type="email" value="{{ user.email }}" disabled
-                                style="width: 100%; padding: 12px; border: 1px solid #eee; border-radius: 8px; background: #fafafa;">
+                            <input type="email" name="email" value="{{ user.email }}"
+                                style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                         </div>
                         <div class="form-group">
                             <label style="display: block; margin-bottom: 8px; font-weight: 500;">Phone Number</label>
-                            <input type="text" value="{{ user.phone|default:'' }}"
+                            <input type="text" name="phone" value="{{ user.phone|default:'' }}"
                                 style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                         </div>
-                        <button type="button" class="btn btn-primary" style="padding: 14px;">Update Profile</button>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Address</label>
+                            <textarea name="address" rows="3"
+                                style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit;">{{ user.address|default:'' }}</textarea>
+                        </div>
+                        
+                        <h3 style="font-size: 18px; margin-top: 10px; margin-bottom: 0; color: #374151;">Business Details</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                             <div class="form-group">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Business Name</label>
+                                <input type="text" name="business_name" value="{{ user.business_name|default:'' }}"
+                                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 500;">GSTIN</label>
+                                <input type="text" name="gstin" value="{{ user.gstin|default:'' }}"
+                                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" style="padding: 14px;">Update Profile</button>
                     </form>
                 </div>
+
+                {% elif section == 'corporate_connect' %}
+                <div class="content-card">
+                    <div class="card-header" style="background: linear-gradient(135deg, #1e3a8a -20%, #2e7d32 120%); color: white; padding: 25px; border-radius: 15px 15px 0 0;">
+                        <h2 style="color: white; margin: 0;"><i class="fas fa-robot me-2"></i> Corporate Connect <span style="font-size: 0.6em; background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 20px; vertical-align: middle;">AI Powered</span></h2>
+                    </div>
+                    <div class="p-4">
+                        <div class="row">
+                            <div class="col-md-5">
+                                <div class="bg-light p-4 rounded-3 mb-4" style="border: 1px solid #e5e7eb; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                                    <h4 class="mb-3" style="color: #1f2937;">Find Corporate Buyers</h4>
+                                    <p class="text-muted mb-4" style="font-size: 0.95rem; line-height: 1.6;">
+                                        Our AI agent scans real-time market data to connect you with verified Rice Mills, Cotton Factories, and Exporters looking for your specific produce.
+                                    </p>
+                                    
+                                    <div class="form-group mb-4">
+                                        <label class="form-label" style="font-weight: 600; color: #374151;">What are you selling today?</label>
+                                        <div class="input-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
+                                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-leaf text-success"></i></span>
+                                            <input type="text" id="ai-query-input" class="form-control border-start-0 ps-0" style="padding: 12px;" placeholder="e.g. Basmati Rice, Raw Cotton...">
+                                        </div>
+                                    </div>
+                                    
+                                    <button class="btn btn-primary w-100 py-3 shadow-sm" onclick="searchCorporateBuyers()" style="background: #2e7d32; border: none; font-weight: 600; transition: all 0.2s;">
+                                        <i class="fas fa-search me-2"></i> Find Matching Buyers
+                                    </button>
+                                    
+                                    <div class="mt-4 pt-3 border-top">
+                                        <small class="text-muted d-block mb-2">Popular searches:</small>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <span class="badge bg-white text-secondary border" style="cursor: pointer;" onclick="document.getElementById('ai-query-input').value='Basmati Rice'; searchCorporateBuyers()">Basmati Rice</span>
+                                            <span class="badge bg-white text-secondary border" style="cursor: pointer;" onclick="document.getElementById('ai-query-input').value='Cotton'; searchCorporateBuyers()">Cotton</span>
+                                            <span class="badge bg-white text-secondary border" style="cursor: pointer;" onclick="document.getElementById('ai-query-input').value='Turmeric'; searchCorporateBuyers()">Turmeric</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-7">
+                                <div id="ai-results-area" style="min-height: 400px;">
+                                    <div class="text-center text-muted py-5 mt-4">
+                                        <div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                                            <i class="fas fa-search" style="font-size: 32px; color: #9ca3af;"></i>
+                                        </div>
+                                        <h5 style="color: #4b5563;">Ready to Search</h5>
+                                        <p style="max-width: 300px; margin: 0 auto;">Enter a crop name to see a list of verified corporate buyers matching your criteria.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    function searchCorporateBuyers() {
+                        const query = document.getElementById('ai-query-input').value;
+                        if (!query) return;
+
+                        const resultsArea = document.getElementById('ai-results-area');
+                        
+                        // Professional Loading State
+                        resultsArea.innerHTML = `
+                            <div class="text-center py-5 mt-4">
+                                <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+                                <h5 class="text-secondary animate-pulse">Analyzing Market Data...</h5>
+                                <p class="text-muted"><small>Finding verified buyers for "${query}"</small></p>
+                            </div>
+                        `;
+
+                        fetch('/api/corporate-connect/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({ query: query })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.results && data.results.length > 0) {
+                                let html = `
+                                    <div class="d-flex justify-content-between align-items-center mb-4">
+                                        <h5 class="m-0 text-success"><i class="fas fa-check-circle me-2"></i> Found ${data.results.length} Matches</h5>
+                                        <span class="badge bg-success bg-opacity-10 text-success">Verified Listings</span>
+                                    </div>
+                                    <div class="table-responsive shadow-sm rounded-3">
+                                        <table class="table table-hover align-middle mb-0" style="border: 1px solid #e5e7eb;">
+                                            <thead class="bg-light text-secondary">
+                                                <tr>
+                                                    <th class="py-3 ps-4" style="font-weight: 600;">Company Name</th>
+                                                    <th class="py-3" style="font-weight: 600;">Type</th>
+                                                    <th class="py-3" style="font-weight: 600;">Location</th>
+                                                    <th class="py-3" style="font-weight: 600;">Looking For</th>
+                                                    <th class="py-3 pe-4 text-end" style="font-weight: 600;">Contact</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="bg-white">
+                                `;
+                                
+                                data.results.forEach(buyer => {
+                                    // Determine icon based on type
+                                    let icon = 'fa-building';
+                                    if(buyer.type.toLowerCase().includes('mill')) icon = 'fa-industry';
+                                    if(buyer.type.toLowerCase().includes('export')) icon = 'fa-ship';
+                                    
+                                    // Unique ID for toggling phone
+                                    const buyerId = Math.random().toString(36).substr(2, 9);
+                                    
+                                    html += `
+                                        <tr>
+                                            <td class="ps-4 py-3">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; color: #2e7d32; flex-shrink: 0;">
+                                                        <i class="fas ${icon}"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="mb-0 fw-bold text-dark">${buyer.name} <i class="fas fa-check-circle text-primary small ms-1" title="Verified"></i></h6>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="py-3">
+                                                <span class="badge bg-light text-dark border fw-normal">${buyer.type}</span>
+                                            </td>
+                                            <td class="py-3">
+                                                <span class="text-secondary"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${buyer.location}</span>
+                                            </td>
+                                            <td class="py-3">
+                                                <small class="text-dark fw-medium bg-light px-2 py-1 rounded border">${buyer.requirements}</small>
+                                            </td>
+                                            <td class="pe-4 py-3 text-end">
+                                                <button onclick="document.getElementById('phone-${buyerId}').style.display='inline-block'; this.style.display='none'" class="btn btn-outline-success btn-sm rounded-pill px-3">
+                                                    <i class="fas fa-address-card me-1"></i> Contact Details
+                                                </button>
+                                                <a id="phone-${buyerId}" href="tel:${buyer.phone}" class="btn btn-success btn-sm rounded-pill px-3" style="display: none; animation: fadeIn 0.3s;">
+                                                    <i class="fas fa-phone me-1"></i> ${buyer.phone}
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    `;
+                                });
+                                html += '</tbody></table></div>';
+                                resultsArea.innerHTML = html;
+                            } else {
+                                resultsArea.innerHTML = `
+                                    <div class="text-center py-5">
+                                        <div class="mb-3 text-warning">
+                                            <i class="fas fa-search-minus fa-4x"></i>
+                                        </div>
+                                        <h5>No direct matches found</h5>
+                                        <p class="text-muted">We couldn't find specific corporate buyers for "${query}" right now.</p>
+                                        <button class="btn btn-primary mt-2">Create General Listing</button>
+                                    </div>
+                                `;
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            resultsArea.innerHTML = `
+                                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <div>Unable to fetch buyer data. Please try again later.</div>
+                                </div>
+                            `;
+                        });
+                    }
+                </script>
 
                 {% else %}
                 <div class="content-card" style="text-align: center; padding: 60px;">
@@ -1139,30 +1358,27 @@
 
         document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
             if (targetListingId) {
-                // Create a form to submit the delete request
+                // Add CSRF token
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = `/listing/${targetListingId}/delete/`;
 
-                // Add CSRF token
-                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-                if (csrfToken) {
-                    const csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = 'csrfmiddlewaretoken';
-                    csrfInput.value = csrfToken.value;
-                    form.appendChild(csrfInput);
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                
+                // Prioritize Cookie Token (Fresher) > DOM Token (Might be stale)
+                const cookieToken = getCookie('csrftoken');
+                if (cookieToken) {
+                    csrfInput.value = cookieToken;
                 } else {
-                    // Try to get CSRF token from cookies as fallback
-                    const csrfCookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
-                    if (csrfCookie) {
-                        const csrfInput = document.createElement('input');
-                        csrfInput.type = 'hidden';
-                        csrfInput.name = 'csrfmiddlewaretoken';
-                        csrfInput.value = csrfCookie.split('=')[1];
-                        form.appendChild(csrfInput);
+                    const domToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                    if (domToken) {
+                        csrfInput.value = domToken.value;
                     }
                 }
+                
+                form.appendChild(csrfInput);
 
                 document.body.appendChild(form);
                 form.submit();
@@ -1204,6 +1420,10 @@
     {{ graph_labels|json_script:"graph-labels-data" }}
     {{ graph_morning|json_script:"graph-morning-data" }}
     {{ graph_evening|json_script:"graph-evening-data" }}
+    {% if sales_graph_labels %}
+    {{ sales_graph_labels|json_script:"sales-labels-data" }}
+    {{ sales_graph_data|json_script:"sales-data-data" }}
+    {% endif %}
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1252,6 +1472,82 @@
                                     stepSize: 1,
                                     color: '#666',
                                     font: { family: 'Outfit' }
+                                },
+                                grid: {
+                                    color: '#f0f0f0'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#666',
+                                    font: { family: 'Outfit' }
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Sales Chart Logic
+            const salesCtx = document.getElementById('salesChart');
+            if (salesCtx && document.getElementById('sales-labels-data')) {
+                const salesLabels = JSON.parse(document.getElementById('sales-labels-data').textContent);
+                const salesData = JSON.parse(document.getElementById('sales-data-data').textContent);
+                
+                new Chart(salesCtx, {
+                    type: 'line',
+                    data: {
+                        labels: salesLabels,
+                        datasets: [{
+                            label: 'Revenue',
+                            data: salesData,
+                            borderColor: '#c2410c', // Orange
+                            backgroundColor: 'rgba(194, 65, 12, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#c2410c',
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            label += 'Rs. ' + context.parsed.y;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#666',
+                                    font: { family: 'Outfit' },
+                                    callback: function(value) {
+                                        return 'Rs. ' + value;
+                                    }
                                 },
                                 grid: {
                                     color: '#f0f0f0'
@@ -1333,5 +1629,43 @@
             return cookieValue;
         }
     </script>
-</body>
-</html>
+
+            </main>
+        </div>
+    </div>
+    
+    <!-- Chatbot Container -->
+    <div id="chatbotFab" class="chatbot-fab role-seller">
+        <i class="fas fa-comment-dots"></i>
+    </div>
+
+    <div id="chatbotWindow" class="chatbot-window role-seller">
+        <div class="chat-header">
+            <div>
+                <h3 id="botName">Bid Bot</h3>
+                <span class="role-label" id="botRole">Seller Assistant</span>
+            </div>
+            <i class="fas fa-times" style="cursor: pointer;" onclick="document.getElementById('chatbotWindow').style.display='none'"></i>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div id="chatTyping" class="typing" style="padding: 0 20px;">Bid Bot is typing...</div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Ask me about your sales...">
+            <button id="chatSend" class="chat-send">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script>
+        // Make CSRF token available globally for AJAX requests
+        window.CSRF_TOKEN = '{{ csrf_token }}';
+    </script>
+    <script src="/assets/js/script.js"></script>
+    <script src="/assets/js/chatbot.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Check for success message (e.g. from Add Listing)
+        // ... existing scripts ...

@@ -19,6 +19,12 @@ class UserProfileForm(forms.ModelForm):
             'bank_name': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
+    def clean_address(self):
+        address = self.cleaned_data.get('address')
+        if not address or len(address.strip()) < 10:
+            raise forms.ValidationError("Please provide a valid, complete address (minimum 10 characters).")
+        return address
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Hide farmer fields for non-farmers dynamically in template or view logic

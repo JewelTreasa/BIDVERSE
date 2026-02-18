@@ -37,10 +37,17 @@ urlpatterns = [
 
     # Payment Callback
     path('payment/success/', views.payment_success, name='payment_success'),
+    path('payment/auction/success/', views.payment_success_auction, name='payment_success_auction'),
+
+    # Corporate Connect (AI)
+    path('api/corporate-connect/', views.corporate_connect_ai, name='corporate_connect_ai'),
+
+    # Invoice Generation
+    path('invoice/<int:order_id>/', views.generate_invoice_pdf, name='generate_invoice_pdf'),
+
+    # Seller Report
+    path('report/seller/', views.generate_seller_report_pdf, name='generate_seller_report'),
 
     # Settings
     path('settings/', views.settings_view, name='settings'),
-    
-    # Chatbot
-    path('chatbot/message/', views.chatbot_message, name='chatbot_message'),
 ]

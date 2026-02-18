@@ -9,6 +9,7 @@ from accounts import views as account_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')),
+    path('oauth/', include('social_django.urls', namespace='social')),
 
     # Frontend routes
     path('', account_views.home, name='home'),
@@ -25,6 +26,7 @@ urlpatterns = [
     path('notifications/', account_views.notifications, name='notifications'),
     path('notifications/mark/<int:notif_id>/', account_views.mark_notification_read, name='mark_notification_read'),
     path('chatbot/message/', account_views.chatbot_response, name='chatbot_message'),
+    path('api/corporate-connect/', account_views.corporate_connect_ai, name='corporate_connect_ai_root'),
     path('admin/send-notification/', account_views.send_notification, name='send_notification'),
 
     # Membership

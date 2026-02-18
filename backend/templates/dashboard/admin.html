@@ -778,6 +778,141 @@
                     </div>
                 </div>
 
+                {% elif section == 'reports' %}
+                <div class="content-card mb-4" style="margin-bottom: 24px;">
+                    <div class="card-header">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <h2><i class="fas fa-chart-pie" style="margin-right: 10px; color: #3b82f6;"></i> Platform Performance Report</h2>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-outline btn-sm">Last 7 Days</button>
+                                <button class="btn btn-primary btn-sm">Last 30 Days</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+                        <div>
+                            <canvas id="salesChart" height="250"></canvas>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 24px; border-radius: 12px; height: 100%;">
+                            <h4 style="margin-bottom: 24px; font-size: 18px;">Key Metrics</h4>
+                            <div style="margin-bottom: 24px;">
+                                <small style="display: block; color: #666; margin-bottom: 4px;">Total Platform Volume</small>
+                                <h3 style="font-size: 24px; font-weight: 700; margin: 0; color: #111;">₹ 1.2 Cr</h3>
+                                <div style="color: #166534; font-size: 13px; margin-top: 4px;">
+                                    <i class="fas fa-arrow-up"></i> 12% vs last month
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 24px;">
+                                <small style="display: block; color: #666; margin-bottom: 4px;">Active Farmers</small>
+                                <h3 style="font-size: 24px; font-weight: 700; margin: 0; color: #111;">850+</h3>
+                                <div style="color: #166534; font-size: 13px; margin-top: 4px;">
+                                    <i class="fas fa-user-plus"></i> 45 new this week
+                                </div>
+                            </div>
+                            <div>
+                                <small style="display: block; color: #666; margin-bottom: 4px;">Successful Auctions</small>
+                                <h3 style="font-size: 24px; font-weight: 700; margin: 0; color: #111;">1,240</h3>
+                                <div style="color: #166534; font-size: 13px; margin-top: 4px;">
+                                    <i class="fas fa-check"></i> 95% success rate
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h5>Top Traded Commodities</h5>
+                        </div>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="commodityChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h5>User Growth</h5>
+                        </div>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="userGrowthChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Sales/Volume Chart
+                        const salesCtx = document.getElementById('salesChart');
+                        if (salesCtx) {
+                            new Chart(salesCtx.getContext('2d'), {
+                                type: 'line',
+                                data: {
+                                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                                    datasets: [{
+                                        label: 'Transaction Volume (₹ Lakhs)',
+                                        data: [12, 19, 15, 25],
+                                        borderColor: '#2e7d32',
+                                        backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                                        fill: true,
+                                        tension: 0.4
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { position: 'top' }
+                                    }
+                                }
+                            });
+                        }
+
+                        // Commodity Distribution
+                        const commCtx = document.getElementById('commodityChart');
+                        if (commCtx) {
+                            new Chart(commCtx.getContext('2d'), {
+                                type: 'doughnut',
+                                data: {
+                                    labels: ['Rice', 'Wheat', 'Spices', 'Cotton', 'Pulses'],
+                                    datasets: [{
+                                        data: [35, 25, 20, 15, 5],
+                                        backgroundColor: [
+                                            '#4caf50', '#8bc34a', '#ff9800', '#2196f3', '#9c27b0'
+                                        ]
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false
+                                }
+                            });
+                        }
+                        
+                        // User Growth
+                        const userCtx = document.getElementById('userGrowthChart');
+                        if (userCtx) {
+                            new Chart(userCtx.getContext('2d'), {
+                                type: 'bar',
+                                data: {
+                                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                                    datasets: [{
+                                        label: 'New Users',
+                                        data: [50, 65, 80, 85, 90, 110],
+                                        backgroundColor: '#3f51b5'
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: {
+                                        y: { beginAtZero: true }
+                                    }
+                                }
+                            });
+                        }
+                    });
+                </script>
+
                 {% elif section == 'settings' %}
                 <div class="content-card">
                     <div class="card-header">

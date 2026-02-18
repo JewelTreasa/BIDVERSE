@@ -8,3 +8,4 @@ requests
 google-auth
 social-auth-app-django
 razorpay
+xhtml2pdf

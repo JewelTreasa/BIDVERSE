@@ -22,6 +22,7 @@ urlpatterns = [
     path('auction/<int:listing_id>/', account_views.auction_detail, name='auction_detail'),
     path('auction/<int:listing_id>/bid/', account_views.place_bid, name='place_bid'),
     path('listing/<int:listing_id>/delete/', account_views.delete_listing, name='delete_listing'),
+    path('listing/<int:listing_id>/edit/', account_views.edit_listing, name='edit_listing'),
     path('listing/<int:listing_id>/notify/', account_views.toggle_notification, name='toggle_notification'),
     path('notifications/', account_views.notifications, name='notifications'),
     path('notifications/mark/<int:notif_id>/', account_views.mark_notification_read, name='mark_notification_read'),

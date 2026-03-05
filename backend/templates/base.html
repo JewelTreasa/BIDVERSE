@@ -50,28 +50,6 @@
     </style>
     
 
-    <!-- Dark Mode Logic -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const toggle = document.getElementById('darkModeToggle');
-            const icon = toggle ? toggle.querySelector('i') : null;
-            
-            // Check Local Storage
-            if (localStorage.getItem('theme') === 'dark') {
-                document.body.classList.add('dark-mode');
-                if(icon) icon.className = 'fas fa-sun';
-            }
-
-            if (toggle) {
-                toggle.addEventListener('click', () => {
-                    document.body.classList.toggle('dark-mode');
-                    const isDark = document.body.classList.contains('dark-mode');
-                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                    if(icon) icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
-                });
-            }
-        });
-    </script>
     {% block extra_head %}{% endblock %}
 </head>
 
@@ -144,10 +122,6 @@
                 <a href="{% url 'login' %}" class="btn btn-outline">Log In</a>
                 <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
                 {% endif %}
-                <!-- Dark Mode Toggle -->
-                <button class="profile-icon-btn" id="darkModeToggle" aria-label="Toggle Dark Mode" style="margin-left: 10px;">
-                     <i class="fas fa-moon"></i>
-                </button>
             </div>
             <button class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
         </div>

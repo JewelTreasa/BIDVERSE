@@ -278,3 +278,31 @@ class Order(models.Model):
     def __str__(self):
         return f"Order for {self.listing.commodity} by {self.buyer.email}"
 
+
+class ContactMessage(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    subject = models.CharField(max_length=255)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.subject} from {self.email}"
+
+
+class CorporateConnect(models.Model):
+    name = models.CharField(max_length=255)
+    business_type = models.CharField(max_length=100)
+    location = models.CharField(max_length=255)
+    requirements = models.TextField()
+    phone = models.CharField(max_length=20)
+    email = models.EmailField()
+    is_verified = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+

@@ -165,6 +165,38 @@
     font-style: italic;
     font-size: 12px;
     color: #94a3b8;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
     display: none;
 }
+
+/* Quick Actions */
+.quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 20px 15px;
+    background: #f8fafc;
+}
+
+.action-btn {
+    background: white;
+    border: 1px solid #e2e8f0;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 12px;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.action-btn:hover {
+    border-color: #2e7d32;
+    color: #2e7d32;
+    background: #f0fdf4;
+}
+
+.role-buyer .action-btn:hover { border-color: var(--chat-buyer); color: var(--chat-buyer); background: #f0f9ff; }
+.role-seller .action-btn:hover { border-color: var(--chat-seller); color: var(--chat-seller); background: #f0fdf4; }
+.role-admin .action-btn:hover { border-color: var(--chat-admin); color: var(--chat-admin); background: #fef2f2; }

@@ -492,23 +492,15 @@
                     </div>
                 </div>
                 
-                <!-- Bidding Activity Graph -->
+
+                <!-- Spending Trend Graph -->
                 <div class="content-card">
                     <div class="card-header">
-                        <h2>Bidding Activity</h2>
-                        <div style="display: flex; gap: 15px; font-size: 14px;">
-                            <span style="display: flex; align-items: center; gap: 6px;">
-                                <span style="display: inline-block; width: 12px; height: 12px; background: #2e7d32; border-radius: 2px;"></span>
-                                Morning
-                            </span>
-                            <span style="display: flex; align-items: center; gap: 6px;">
-                                <span style="display: inline-block; width: 12px; height: 12px; background: #0284c7; border-radius: 2px;"></span>
-                                Evening
-                            </span>
-                        </div>
+                        <h2>Spending Trend (Last 7 Days)</h2>
+                        <div style="font-size: 14px; color: #666;"><i class="fas fa-wallet"></i> Daily expenditure</div>
                     </div>
                     <div style="height: 300px; position: relative;">
-                        <canvas id="biddingChart"></canvas>
+                        <canvas id="spendChart"></canvas>
                     </div>
                 </div>
 
@@ -706,17 +698,62 @@
                 <div class="content-card">
                     <div class="card-header">
                         <h2>My Watchlist</h2>
-                        <span class="badge"
-                            style="background: #e0f2fe; color: #075985; padding: 4px 12px; border-radius: 20px; font-size: 14px;">Beta</span>
+                        <span class="badge" style="background: #e0f2fe; color: #075985; padding: 4px 12px; border-radius: 20px; font-size: 14px;">Items I've Bid On</span>
                     </div>
-                    <div style="text-align: center; padding: 60px;">
-                        <i class="fas fa-heart"
-                            style="font-size: 48px; color: #fee2e2; margin-bottom: 20px; display: block;"></i>
-                        <p style="color: #666;">Items you heart will appear here. For now, check your <strong>My
-                                Bids</strong> section to track active interests.</p>
-                        <a href="?section=bids" class="btn btn-outline"
-                            style="margin-top: 20px; display: inline-block;">Go to My Bids</a>
-                    </div>
+                    
+                    <table class="action-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Highest Bid</th>
+                                <th>My Max Bid</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in watchlist_items %}
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 500;">{{ item.commodity }}</div>
+                                    <div style="font-size: 12px; color: #666;">Ends: {{ item.end_time|date:"M d, H:i" }}</div>
+                                </td>
+                                <td>₹{{ item.current_highest_bid|default:item.base_price }}</td>
+                                <td>₹{{ item.user_max_bid }}</td>
+                                <td>
+                                    {% if item.is_active %}
+                                        {% if item.user_status == 'Leading' %}
+                                        <span class="badge" style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px;">Leading</span>
+                                        {% else %}
+                                        <span class="badge" style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 12px;">Outbid</span>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if item.user_status == 'Won' %}
+                                        <span class="badge" style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px;">Won</span>
+                                        {% else %}
+                                        <span class="badge" style="background: #f3f4f6; color: #6b7280; padding: 4px 10px; border-radius: 12px;">Lost</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.is_active %}
+                                    <a href="{% url 'auction_detail' item.id %}" class="btn btn-sm btn-primary" style="padding: 6px 14px;">Bid Now</a>
+                                    {% else %}
+                                    <a href="{% url 'auction_detail' item.id %}" class="btn btn-sm btn-outline" style="padding: 6px 14px;">View</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 60px;">
+                                    <i class="fas fa-heart" style="font-size: 48px; color: #fee2e2; margin-bottom: 20px; display: block;"></i>
+                                    <p style="color: #666;">You haven't placed any bids yet.</p>
+                                    <a href="?section=bids" class="btn btn-outline" style="margin-top: 20px; display: inline-block;">Go to My Bids</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
 
                 {% elif section == 'settings' %}
@@ -766,7 +803,11 @@
                     </div>
                     <div class="notification-list">
                         {% for notif in notifications_list %}
-                        <div class="notification-item" style="padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 15px; {% if not notif.is_read %}background-color: #f0fdf4;{% endif %}">
+                        {% if not notif.is_read %}
+                        <div class="notification-item" style="padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 15px; background-color: #f0fdf4;">
+                        {% else %}
+                        <div class="notification-item" style="padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 15px;">
+                        {% endif %}
                             <div class="notif-icon" style="width: 40px; height: 40px; border-radius: 50%; background: #dcfce7; color: #166534; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                 <i class="fas fa-bell"></i>
                             </div>
@@ -852,61 +893,51 @@
     <script src="/assets/js/script.js"></script>
     <script src="/assets/js/chatbot.js?v=2"></script>
     
+    {{ spend_labels|json_script:"spend-labels" }}
+    {{ spend_data|json_script:"spend-data" }}
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const ctx = document.getElementById('biddingChart');
-            if (ctx) {
-                new Chart(ctx, {
-                    type: 'bar',
+
+            const spendCtx = document.getElementById('spendChart');
+            if (spendCtx && "{{ spend_labels }}") {
+                const spend_labels = JSON.parse(document.getElementById('spend-labels').textContent);
+                const spend_data = JSON.parse(document.getElementById('spend-data').textContent);
+
+                new Chart(spendCtx, {
+                    type: 'line',
                     data: {
-                        labels: {{ graph_labels|safe }},
-                        datasets: [
-                            {
-                                label: 'Morning Session',
-                                data: {{ graph_morning|safe }},
-                                backgroundColor: '#2e7d32',
-                                borderRadius: 4,
-                            },
-                            {
-                                label: 'Evening Session',
-                                data: {{ graph_evening|safe }},
-                                backgroundColor: '#0284c7',
-                                borderRadius: 4,
-                            }
-                        ]
+                        labels: spend_labels,
+                        datasets: [{
+                            label: 'Daily Spending',
+                            data: spend_data,
+                            borderColor: '#7c3aed',
+                            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                            }
+                            legend: { display: false }
                         },
                         scales: {
                             y: {
                                 beginAtZero: true,
+                                suggestedMax: 5000,
                                 ticks: {
-                                    stepSize: 1,
-                                    color: '#666',
-                                    font: { family: 'Outfit' }
-                                },
-                                grid: {
-                                    color: '#f0f0f0'
+                                    stepSize: 1000,
+                                    precision: 0,
+                                    font: { family: 'Outfit' },
+                                    callback: (value) => '₹' + value
                                 }
                             },
                             x: {
-                                ticks: {
-                                    color: '#666',
-                                    font: { family: 'Outfit' }
-                                },
-                                grid: {
-                                    display: false
-                                }
+                                ticks: { font: { family: 'Outfit' } }
                             }
                         }
                     }

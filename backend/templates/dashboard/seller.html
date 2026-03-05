@@ -458,7 +458,7 @@
                         </div>
                     </div>
                     
-                    {% if user.user_type == 'BUYER' %}
+                    {% if user.user_type == 'FARMER' or user.user_type == 'BUYER' %}
                     <!-- Notification Dropdown -->
                     <div class="profile-dropdown">
                         <button class="profile-icon-btn" onclick="toggleNotificationDropdown()" aria-label="Notifications" style="position: relative;">
@@ -525,6 +525,16 @@
                         <li class="nav-item"><a href="?section=settings"
                                 class="nav-link {% if section == 'settings' %}active{% endif %}"><i class="fas fa-cog"></i>
                                 Settings</a></li>
+                        <li class="nav-item">
+                            <a href="?section=notifications" class="nav-link {% if section == 'notifications' %}active{% endif %}">
+                                <i class="fas fa-bell"></i> Notifications
+                            </a>
+                        </li>
+                        <li class="nav-item" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+                            <a href="{% url 'logout' %}" class="nav-link" style="color: #ef4444;">
+                                <i class="fas fa-sign-out-alt"></i> Log Out
+                            </a>
+                        </li>
                     </ul>
                 </aside>
 
@@ -583,23 +593,15 @@
                     </div>
                 </div>
 
-                <!-- Listing Activity Graph -->
+
+                <!-- Revenue Trend Graph -->
                 <div class="content-card">
                     <div class="card-header">
-                        <h2>Listing Activity</h2>
-                        <div style="display: flex; gap: 15px; font-size: 14px;">
-                            <span style="display: flex; align-items: center; gap: 6px;">
-                                <span style="display: inline-block; width: 12px; height: 12px; background: #166534; border-radius: 2px;"></span>
-                                Morning
-                            </span>
-                            <span style="display: flex; align-items: center; gap: 6px;">
-                                <span style="display: inline-block; width: 12px; height: 12px; background: #84cc16; border-radius: 2px;"></span>
-                                Evening
-                            </span>
-                        </div>
+                        <h2>Revenue Trend (Last 7 Days)</h2>
+                        <div style="font-size: 14px; color: #666;"><i class="fas fa-rupee-sign"></i> Daily earnings</div>
                     </div>
                     <div style="height: 300px; position: relative;">
-                        <canvas id="listingChart"></canvas>
+                        <canvas id="salesChart"></canvas>
                     </div>
                 </div>
 
@@ -752,6 +754,13 @@
                                 </td>
                                 <td>{{ listing.created_at|date:"M d, Y" }}</td>
                                 <td style="text-align: center;">
+                                    {% now "Y-m-d H:i:s" as current_time %}
+                                    {% if listing.start_time|date:"Y-m-d H:i:s" > current_time %}
+                                    <a href="{% url 'edit_listing' listing.id %}" class="edit-btn" title="Edit listing"
+                                        style="display: inline-block; color: #d97706; font-size: 18px; padding: 4px 8px; transition: color 0.2s; margin-right: 5px;">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
                                     <button class="delete-btn" onclick="confirmDelete('{{ listing.id }}')"
                                         title="Delete listing"
                                         style="background: none; border: none; cursor: pointer; color: #dc2626; font-size: 18px; padding: 4px 8px; transition: color 0.2s;">
@@ -1056,70 +1065,386 @@
                 </div>
 
                 {% elif section == 'corporate_connect' %}
-                <div class="content-card">
-                    <div class="card-header" style="background: linear-gradient(135deg, #1e3a8a -20%, #2e7d32 120%); color: white; padding: 25px; border-radius: 15px 15px 0 0;">
-                        <h2 style="color: white; margin: 0;"><i class="fas fa-robot me-2"></i> Corporate Connect <span style="font-size: 0.6em; background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 20px; vertical-align: middle;">AI Powered</span></h2>
+                <style>
+                    /* Premium Corporate Connect Design System */
+                    .cc-container {
+                        --cc-primary: #166534;
+                        --cc-secondary: #22c55e;
+                        --cc-glass: rgba(255, 255, 255, 0.7);
+                        --cc-border: rgba(255, 255, 255, 0.3);
+                        font-family: 'Outfit', sans-serif;
+                    }
+
+                    /* Animated Mesh Gradient Hero */
+                    .cc-hero-wrap {
+                        position: relative;
+                        background: #166534; /* Brand green */
+                        background: linear-gradient(135deg, #166534 0%, #0d361c 100%);
+                        border-radius: 40px;
+                        padding: 100px 40px 140px;
+                        overflow: hidden;
+                        margin-bottom: -80px;
+                        box-shadow: 0 40px 80px rgba(6, 78, 30, 0.15);
+                    }
+
+
+                    .cc-hero-content {
+                        position: relative;
+                        z-index: 2;
+                        color: white;
+                        text-align: center;
+                        max-width: 750px;
+                        margin: 0 auto;
+                        animation: ccFadeInDown 1s ease-out;
+                        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+                    }
+
+                    @keyframes ccFadeInDown {
+                        from { opacity: 0; transform: translateY(-20px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+
+                    .cc-badge {
+                        background: rgba(255, 255, 255, 0.15);
+                        backdrop-filter: blur(10px);
+                        -webkit-backdrop-filter: blur(10px);
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                        padding: 8px 16px;
+                        border-radius: 100px;
+                        font-size: 0.75rem;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 2px;
+                        margin-bottom: 30px;
+                        display: inline-block;
+                    }
+
+                    .cc-hero h1 {
+                        font-family: 'Playfair Display', serif !important;
+                        font-size: clamp(2rem, 5vw, 3rem) !important;
+                        font-weight: 900 !important;
+                        margin-bottom: 25px;
+                        line-height: 1.1;
+                    }
+
+                    /* Floating Glassmorphism Search Card */
+                    .cc-search-floating {
+                        position: relative;
+                        z-index: 10;
+                        background: var(--cc-glass);
+                        backdrop-filter: blur(25px);
+                        -webkit-backdrop-filter: blur(25px);
+                        border: 1px solid var(--cc-border);
+                        border-radius: 30px;
+                        padding: 40px;
+                        max-width: 900px;
+                        margin: 0 auto 60px;
+                        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.1);
+                        transition: transform 0.3s ease;
+                    }
+
+                    .cc-search-input-group {
+                        display: flex;
+                        background: white;
+                        padding: 12px;
+                        border-radius: 20px;
+                        box-shadow: 0 10px 20px rgba(0,0,0,0.03);
+                        gap: 15px;
+                        border: 1px solid #e5e7eb;
+                        transition: all 0.3s ease;
+                        margin-bottom: 25px;
+                    }
+
+                    .cc-search-input-group:focus-within {
+                        border-color: var(--cc-primary);
+                        box-shadow: 0 15px 30px rgba(22, 101, 52, 0.1);
+                        transform: translateY(-2px);
+                    }
+
+                    .cc-search-input-group i {
+                        padding-left: 15px;
+                        align-self: center;
+                        color: #9ca3af;
+                        font-size: 1.25rem;
+                    }
+
+                    .cc-search-input-group input {
+                        flex: 1;
+                        border: none;
+                        font-size: 1.15rem;
+                        font-weight: 500;
+                        padding: 10px 0;
+                        color: #1f2937;
+                    }
+
+                    .cc-search-input-group input:focus { outline: none; }
+
+                    .cc-premium-btn {
+                        background: var(--cc-primary);
+                        color: white !important;
+                        padding: 15px 40px;
+                        border-radius: 15px;
+                        font-weight: 800;
+                        border: none;
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        box-shadow: 0 10px 20px rgba(22, 101, 52, 0.2);
+                        white-space: nowrap;
+                    }
+
+                    .cc-premium-btn:hover {
+                        background: #064e1e;
+                        transform: scale(1.02);
+                        box-shadow: 0 15px 30px rgba(22, 101, 52, 0.3);
+                    }
+
+                    .cc-suggestions {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        gap: 12px;
+                        flex-wrap: wrap;
+                    }
+
+                    .cc-suggestion-label {
+                        font-size: 0.7rem;
+                        font-weight: 800;
+                        color: #6b7280;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        margin-right: 10px;
+                    }
+
+                    .cc-suggestion-chip {
+                        background: rgba(255, 255, 255, 0.6);
+                        padding: 8px 18px;
+                        border-radius: 50px;
+                        font-size: 0.85rem;
+                        font-weight: 600;
+                        color: #4b5563;
+                        border: 1px solid #e5e7eb;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    }
+
+                    .cc-suggestion-chip:hover {
+                        background: white;
+                        color: var(--cc-primary);
+                        border-color: var(--cc-primary);
+                        transform: translateY(-2px);
+                    }
+
+                    /* Results Grid */
+                    .cc-results-grid {
+                        display: grid;
+                        gap: 25px;
+                        padding-bottom: 50px;
+                    }
+
+                    .cc-card-premium {
+                        background: white;
+                        border-radius: 25px;
+                        padding: 35px;
+                        border: 1px solid #f1f5f9;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                        animation: ccSlideUp 0.6s backwards;
+                    }
+
+                    @keyframes ccSlideUp {
+                        from { opacity: 0; transform: translateY(40px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+
+                    .cc-card-premium:hover {
+                        transform: translateY(-10px);
+                        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.05);
+                        border-color: #dcfce7;
+                    }
+
+                    .cc-card-main {
+                        display: flex;
+                        gap: 30px;
+                        align-items: center;
+                    }
+
+                    .cc-avatar {
+                        width: 80px;
+                        height: 80px;
+                        border-radius: 20px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 2rem;
+                        box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+                    }
+
+                    .cc-name {
+                        font-family: 'Playfair Display', serif !important;
+                        font-size: 1.4rem !important;
+                        font-weight: 800 !important;
+                        color: #111827;
+                        margin-bottom: 8px;
+                    }
+
+                    .cc-meta {
+                        display: flex;
+                        gap: 20px;
+                        margin-bottom: 15px;
+                    }
+
+                    .cc-meta-item {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        font-size: 0.95rem;
+                        color: #6b7280;
+                        font-weight: 500;
+                    }
+
+                    .cc-meta-item i { color: #22c55e; }
+
+                    .cc-tag-badge {
+                        background: #ecfdf5;
+                        color: #065f46;
+                        padding: 6px 16px;
+                        border-radius: 100px;
+                        font-size: 0.8rem;
+                        font-weight: 700;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        border: 1px solid #d1fae5;
+                    }
+
+                    .cc-cta-wrap {
+                        text-align: right;
+                    }
+
+                    .cc-reveal-btn {
+                        background: #f8fafc;
+                        color: #1f2937 !important;
+                        padding: 16px 32px;
+                        border-radius: 16px;
+                        font-weight: 800;
+                        border: 1px solid #e2e8f0;
+                        transition: all 0.3s ease;
+                    }
+
+                    .cc-reveal-btn:hover {
+                        background: var(--cc-primary);
+                        color: white !important;
+                        border-color: var(--cc-primary);
+                        transform: scale(1.05);
+                    }
+
+                    .cc-empty {
+                        text-align: center;
+                        padding: 100px 40px;
+                        background: rgba(255, 255, 255, 0.4);
+                        border-radius: 40px;
+                        border: 2px dashed #cbd5e1;
+                        color: #64748b;
+                    }
+
+                    .cc-empty i { font-size: 5rem; margin-bottom: 30px; opacity: 0.2; }
+
+                    .animate-fadeInRight {
+                        animation: ccFadeInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                    }
+
+                    @keyframes ccFadeInRight {
+                        from { opacity: 0; transform: translateX(20px); }
+                        to { opacity: 1; transform: translateX(0); }
+                    }
+                </style>
+
+                <div class="cc-container">
+                    <!-- Ultra Hero Section -->
+                    <div class="cc-hero-wrap">
+                        <div class="cc-hero-content">
+                            <h1 style="text-shadow: 0 4px 15px rgba(0,0,0,0.4);">Connect with High-Volume Corporate Buyers</h1>
+                            <p class="fs-4 opacity-100 fw-medium">Unlock exclusive partnerships with verified rice mills, drying centers, and trade exporters in the BidVerse network.</p>
+                        </div>
                     </div>
-                    <div class="p-4">
-                        <div class="row">
-                            <div class="col-md-5">
-                                <div class="bg-light p-4 rounded-3 mb-4" style="border: 1px solid #e5e7eb; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                                    <h4 class="mb-3" style="color: #1f2937;">Find Corporate Buyers</h4>
-                                    <p class="text-muted mb-4" style="font-size: 0.95rem; line-height: 1.6;">
-                                        Our AI agent scans real-time market data to connect you with verified Rice Mills, Cotton Factories, and Exporters looking for your specific produce.
-                                    </p>
-                                    
-                                    <div class="form-group mb-4">
-                                        <label class="form-label" style="font-weight: 600; color: #374151;">What are you selling today?</label>
-                                        <div class="input-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
-                                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-leaf text-success"></i></span>
-                                            <input type="text" id="ai-query-input" class="form-control border-start-0 ps-0" style="padding: 12px;" placeholder="e.g. Basmati Rice, Raw Cotton...">
-                                        </div>
-                                    </div>
-                                    
-                                    <button class="btn btn-primary w-100 py-3 shadow-sm" onclick="searchCorporateBuyers()" style="background: #2e7d32; border: none; font-weight: 600; transition: all 0.2s;">
-                                        <i class="fas fa-search me-2"></i> Find Matching Buyers
-                                    </button>
-                                    
-                                    <div class="mt-4 pt-3 border-top">
-                                        <small class="text-muted d-block mb-2">Popular searches:</small>
-                                        <div class="d-flex flex-wrap gap-2">
-                                            <span class="badge bg-white text-secondary border" style="cursor: pointer;" onclick="document.getElementById('ai-query-input').value='Basmati Rice'; searchCorporateBuyers()">Basmati Rice</span>
-                                            <span class="badge bg-white text-secondary border" style="cursor: pointer;" onclick="document.getElementById('ai-query-input').value='Cotton'; searchCorporateBuyers()">Cotton</span>
-                                            <span class="badge bg-white text-secondary border" style="cursor: pointer;" onclick="document.getElementById('ai-query-input').value='Turmeric'; searchCorporateBuyers()">Turmeric</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-7">
-                                <div id="ai-results-area" style="min-height: 400px;">
-                                    <div class="text-center text-muted py-5 mt-4">
-                                        <div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-                                            <i class="fas fa-search" style="font-size: 32px; color: #9ca3af;"></i>
-                                        </div>
-                                        <h5 style="color: #4b5563;">Ready to Search</h5>
-                                        <p style="max-width: 300px; margin: 0 auto;">Enter a crop name to see a list of verified corporate buyers matching your criteria.</p>
-                                    </div>
-                                </div>
-                            </div>
+
+                    <!-- Floating Search Section -->
+                    <div class="cc-search-floating">
+                        <div class="cc-search-input-group">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="ai-query-input" placeholder="Search by crop, business type, or location..."
+                                   onkeypress="if(event.key === 'Enter') searchCorporateBuyers()">
+                            <button onclick="searchCorporateBuyers()" class="cc-premium-btn">
+                                Match Partner
+                            </button>
+                        </div>
+                        <div class="cc-suggestions">
+                            <span class="cc-suggestion-label">Popular Searches:</span>
+                            <button class="cc-suggestion-chip" onclick="document.getElementById('ai-query-input').value='Rice'; searchCorporateBuyers()">Rice</button>
+                            <button class="cc-suggestion-chip" onclick="document.getElementById('ai-query-input').value='Mill'; searchCorporateBuyers()">Mills</button>
+                            <button class="cc-suggestion-chip" onclick="document.getElementById('ai-query-input').value='Drying Plant'; searchCorporateBuyers()">Drying Plants</button>
+                            <button class="cc-suggestion-chip" onclick="document.getElementById('ai-query-input').value='Pepper'; searchCorporateBuyers()">Spices</button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Results Area -->
+                    <div id="ai-results-area" class="cc-results-grid">
+                        <div class="cc-empty">
+                            <i class="fas fa-handshake-alt-slash"></i>
+                            <h3 class="fw-bold mb-2">Ready to expand your reach?</h3>
+                            <p class="mb-0">Search thousands of verified corporate records and connect instantly.</p>
                         </div>
                     </div>
                 </div>
 
                 <script>
+                    function getCookie(name) {
+                        let cookieValue = null;
+                        if (document.cookie && document.cookie !== '') {
+                            const cookies = document.cookie.split(';');
+                            for (let i = 0; i < cookies.length; i++) {
+                                const cookie = cookies[i].trim();
+                                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                    break;
+                                }
+                            }
+                        }
+                        return cookieValue;
+                    }
+
+                    function revealContact(btn, phone, email) {
+                        const container = btn.parentElement;
+                        btn.style.transform = 'scale(0.9)';
+                        btn.style.opacity = '0';
+                        setTimeout(() => {
+                             container.innerHTML = `
+                                <div class="animate-fadeInRight d-flex flex-column gap-2" style="min-width: 220px;">
+                                    <h6 class="fw-bold text-uppercase text-muted mb-2" style="font-size: 0.6rem; letter-spacing: 1.5px; opacity: 0.7;">Verified Contact</h6>
+                                    <a href="tel:${phone}" class="btn btn-success py-2 rounded-3 fw-bold shadow-sm d-flex align-items-center justify-content-center" style="font-size: 0.9rem;">
+                                        <i class="fas fa-phone-alt me-2"></i> ${phone}
+                                    </a>
+                                    <a href="mailto:${email}" class="btn btn-outline-success py-2 rounded-3 fw-bold d-flex align-items-center justify-content-center" style="font-size: 0.8rem; border-width: 2px;">
+                                        <i class="fas fa-envelope-open-text me-2"></i> ${email}
+                                    </a>
+                                </div>
+                            `;
+                        }, 250);
+                    }
+
                     function searchCorporateBuyers() {
                         const query = document.getElementById('ai-query-input').value;
                         if (!query) return;
 
                         const resultsArea = document.getElementById('ai-results-area');
                         
-                        // Professional Loading State
+                        // Premium Loading State
                         resultsArea.innerHTML = `
-                            <div class="text-center py-5 mt-4">
-                                <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
-                                <h5 class="text-secondary animate-pulse">Analyzing Market Data...</h5>
-                                <p class="text-muted"><small>Finding verified buyers for "${query}"</small></p>
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-success" role="status" style="width: 4rem; height: 4rem; border-width: 0.3rem;"></div>
+                                <h4 class="mt-4 fw-bold text-dark">Connecting to AI Directory...</h4>
+                                <p class="text-muted">Filtering verified corporate partners for "${query}"</p>
                             </div>
                         `;
 
@@ -1134,77 +1459,65 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.results && data.results.length > 0) {
-                                let html = `
-                                    <div class="d-flex justify-content-between align-items-center mb-4">
-                                        <h5 class="m-0 text-success"><i class="fas fa-check-circle me-2"></i> Found ${data.results.length} Matches</h5>
-                                        <span class="badge bg-success bg-opacity-10 text-success">Verified Listings</span>
-                                    </div>
-                                    <div class="table-responsive shadow-sm rounded-3">
-                                        <table class="table table-hover align-middle mb-0" style="border: 1px solid #e5e7eb;">
-                                            <thead class="bg-light text-secondary">
-                                                <tr>
-                                                    <th class="py-3 ps-4" style="font-weight: 600;">Company Name</th>
-                                                    <th class="py-3" style="font-weight: 600;">Type</th>
-                                                    <th class="py-3" style="font-weight: 600;">Location</th>
-                                                    <th class="py-3" style="font-weight: 600;">Looking For</th>
-                                                    <th class="py-3 pe-4 text-end" style="font-weight: 600;">Contact</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="bg-white">
-                                `;
+                                let html = '';
                                 
-                                data.results.forEach(buyer => {
-                                    // Determine icon based on type
-                                    let icon = 'fa-building';
-                                    if(buyer.type.toLowerCase().includes('mill')) icon = 'fa-industry';
-                                    if(buyer.type.toLowerCase().includes('export')) icon = 'fa-ship';
+                                data.results.forEach((buyer, index) => {
+                                    let icon = 'fa-building-columns';
+                                    let color = '#3b82f6';
+                                    let bg = '#eff6ff';
                                     
-                                    // Unique ID for toggling phone
-                                    const buyerId = Math.random().toString(36).substr(2, 9);
+                                    if(buyer.type.toLowerCase().includes('mill')) {
+                                        icon = 'fa-industry';
+                                        color = '#ea580c';
+                                        bg = '#fff7ed';
+                                    } else if(buyer.type.toLowerCase().includes('export')) {
+                                        icon = 'fa-ship';
+                                        color = '#2563eb';
+                                        bg = '#f0f9ff';
+                                    } else if(buyer.type.toLowerCase().includes('drying')) {
+                                        icon = 'fa-wind';
+                                        color = '#166534';
+                                        bg = '#f0fdf4';
+                                    }
                                     
                                     html += `
-                                        <tr>
-                                            <td class="ps-4 py-3">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; color: #2e7d32; flex-shrink: 0;">
-                                                        <i class="fas ${icon}"></i>
+                                        <div class="cc-card-premium" style="animation-delay: ${index * 0.15}s;">
+                                            <div class="cc-card-main">
+                                                <div class="cc-avatar" style="background: ${bg}; color: ${color};">
+                                                    <i class="fas ${icon}"></i>
+                                                </div>
+                                                <div class="cc-details">
+                                                    <div class="d-flex align-items-center gap-3 mb-2">
+                                                        <h2 class="cc-name mb-0">${buyer.name}</h2>
+                                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 border border-success border-opacity-20" style="font-size: 0.65rem;">
+                                                            <i class="fas fa-shield-check me-1"></i> VERIFIED
+                                                        </span>
                                                     </div>
-                                                    <div>
-                                                        <h6 class="mb-0 fw-bold text-dark">${buyer.name} <i class="fas fa-check-circle text-primary small ms-1" title="Verified"></i></h6>
+                                                    <div class="cc-meta">
+                                                        <div class="cc-meta-item"><i class="fas fa-location-dot"></i> ${buyer.location}</div>
+                                                        <div class="cc-meta-item"><i class="fas fa-calendar-check"></i> Actively Buying</div>
+                                                    </div>
+                                                    <div class="cc-tag-badge">
+                                                        <i class="fas fa-tags"></i>
+                                                        Needs: ${buyer.requirements}
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td class="py-3">
-                                                <span class="badge bg-light text-dark border fw-normal">${buyer.type}</span>
-                                            </td>
-                                            <td class="py-3">
-                                                <span class="text-secondary"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${buyer.location}</span>
-                                            </td>
-                                            <td class="py-3">
-                                                <small class="text-dark fw-medium bg-light px-2 py-1 rounded border">${buyer.requirements}</small>
-                                            </td>
-                                            <td class="pe-4 py-3 text-end">
-                                                <button onclick="document.getElementById('phone-${buyerId}').style.display='inline-block'; this.style.display='none'" class="btn btn-outline-success btn-sm rounded-pill px-3">
-                                                    <i class="fas fa-address-card me-1"></i> Contact Details
+                                            </div>
+                                            <div class="cc-cta-wrap">
+                                                <button onclick="revealContact(this, '${buyer.phone}', '${buyer.email}')" class="cc-reveal-btn">
+                                                    <i class="fas fa-address-card me-2"></i> Contact Details
                                                 </button>
-                                                <a id="phone-${buyerId}" href="tel:${buyer.phone}" class="btn btn-success btn-sm rounded-pill px-3" style="display: none; animation: fadeIn 0.3s;">
-                                                    <i class="fas fa-phone me-1"></i> ${buyer.phone}
-                                                </a>
-                                            </td>
-                                        </tr>
+                                            </div>
+                                        </div>
                                     `;
                                 });
-                                html += '</tbody></table></div>';
                                 resultsArea.innerHTML = html;
                             } else {
                                 resultsArea.innerHTML = `
-                                    <div class="text-center py-5">
-                                        <div class="mb-3 text-warning">
-                                            <i class="fas fa-search-minus fa-4x"></i>
-                                        </div>
-                                        <h5>No direct matches found</h5>
-                                        <p class="text-muted">We couldn't find specific corporate buyers for "${query}" right now.</p>
-                                        <button class="btn btn-primary mt-2">Create General Listing</button>
+                                    <div class="cc-empty">
+                                        <i class="fas fa-search-minus"></i>
+                                        <h3 class="fw-bold mb-2">No precise matches found</h3>
+                                        <p class="mb-0">Try a broader term like "Rice" or a different region.</p>
                                     </div>
                                 `;
                             }
@@ -1212,17 +1525,51 @@
                         .catch(err => {
                             console.error(err);
                             resultsArea.innerHTML = `
-                                <div class="alert alert-danger d-flex align-items-center" role="alert">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    <div>Unable to fetch buyer data. Please try again later.</div>
+                                <div class="alert alert-danger rounded-4 py-5 px-5 text-center">
+                                    <i class="fas fa-wifi-slash fs-1 mb-3"></i>
+                                    <h5 class="fw-bold">Connection Timeout</h5>
+                                    <p class="mb-0">We're having trouble reaching the directory. Please check your internet or try again.</p>
                                 </div>
                             `;
                         });
                     }
                 </script>
 
+                {% elif section == 'notifications' %}
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2>Notifications</h2>
+                    </div>
+                    <div class="notification-list">
+                        {% for notif in notifications_list %}
+                        {% if not notif.is_read %}
+                        <div class="notification-item" style="padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 15px; background-color: #f0fdf4;">
+                        {% else %}
+                        <div class="notification-item" style="padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 15px;">
+                        {% endif %}
+                            <div class="notif-icon" style="width: 40px; height: 40px; border-radius: 50%; background: #dcfce7; color: #166534; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                            <div class="notif-content" style="flex: 1;">
+                                <p style="margin: 0; color: #333;">{{ notif.message }}</p>
+                                <small style="color: #666;">{{ notif.created_at|timesince }} ago</small>
+                            </div>
+                            {% if not notif.is_read %}
+                            <div class="notif-action">
+                                <span style="width: 10px; height: 10px; background: #2e7d32; border-radius: 50%; display: inline-block;"></span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% empty %}
+                        <div style="text-align: center; padding: 40px; color: #666;">
+                            <i class="fas fa-bell-slash" style="font-size: 32px; color: #ddd; margin-bottom: 15px;"></i>
+                            <p>No notifications yet.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
                 {% else %}
-                <div class="content-card" style="text-align: center; padding: 60px;">
                     <i class="fas fa-tools"
                         style="font-size: 48px; color: #ddd; margin-bottom: 20px; display: block;"></i>
                     <h2>{{ section|title }} Section</h2>
@@ -1417,9 +1764,6 @@
         });
     </script>
     <!-- Data for Charts -->
-    {{ graph_labels|json_script:"graph-labels-data" }}
-    {{ graph_morning|json_script:"graph-morning-data" }}
-    {{ graph_evening|json_script:"graph-evening-data" }}
     {% if sales_graph_labels %}
     {{ sales_graph_labels|json_script:"sales-labels-data" }}
     {{ sales_graph_data|json_script:"sales-data-data" }}
@@ -1427,70 +1771,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Data injected from Django via json_script
-            const graphLabels = JSON.parse(document.getElementById('graph-labels-data').textContent);
-            const graphMorning = JSON.parse(document.getElementById('graph-morning-data').textContent);
-            const graphEvening = JSON.parse(document.getElementById('graph-evening-data').textContent);
-
-            const ctx = document.getElementById('listingChart');
-            if (ctx) {
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: graphLabels,
-                        datasets: [
-                            {
-                                label: 'Morning Session',
-                                data: graphMorning,
-                                backgroundColor: '#166534',
-                                borderRadius: 4,
-                            },
-                            {
-                                label: 'Evening Session',
-                                data: graphEvening,
-                                backgroundColor: '#84cc16',
-                                borderRadius: 4,
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    stepSize: 1,
-                                    color: '#666',
-                                    font: { family: 'Outfit' }
-                                },
-                                grid: {
-                                    color: '#f0f0f0'
-                                }
-                            },
-                            x: {
-                                ticks: {
-                                    color: '#666',
-                                    font: { family: 'Outfit' }
-                                },
-                                grid: {
-                                    display: false
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
             // Sales Chart Logic
             const salesCtx = document.getElementById('salesChart');
             if (salesCtx && document.getElementById('sales-labels-data')) {
@@ -1542,7 +1822,10 @@
                         scales: {
                             y: {
                                 beginAtZero: true,
+                                suggestedMax: 5000,
                                 ticks: {
+                                    stepSize: 1000,
+                                    precision: 0,
                                     color: '#666',
                                     font: { family: 'Outfit' },
                                     callback: function(value) {

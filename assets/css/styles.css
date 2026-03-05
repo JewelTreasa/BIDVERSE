@@ -21,27 +21,12 @@
     --card-bg: #FFFFFF;
     --input-bg: #FFFFFF;
     --dropdown-bg: #FFFFFF;
+    /* Modal Backdrop */
     --modal-bg: #FFFFFF;
 
     /* Spacing */
     --section-padding: 5rem 0;
     --container-width: 1200px;
-}
-
-/* Dark Mode Variables */
-body.dark-mode {
-    --text-dark: #E2E8F0;
-    --text-gray: #94A3B8;
-    --text-light: #64748B;
-    --white: #0F172A; /* This might be confusing, but --white usually means 'background of card' in some contexts, but here it's used for actual white. Let's remap logic below */
-    --light-bg: #0F172A;
-    --border-color: #334155;
-    
-    --card-bg: #1E293B;
-    --input-bg: #1E293B;
-    --dropdown-bg: #1E293B;
-    --modal-bg: #1E293B;
-    --brand-dark: #F1F5F9;
 }
 
 /* Global Reset */
@@ -56,7 +41,6 @@ body {
     color: var(--text-dark);
     line-height: 1.6;
     background-color: var(--light-bg);
-    transition: background-color 0.3s, color 0.3s;
 }
 
 h1,

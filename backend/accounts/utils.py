@@ -157,6 +157,13 @@ def auto_end_expired_auctions():
                 notification_type='WIN'
             )
             
+            # Notify Seller
+            Notification.objects.create(
+                receiver=listing.seller,
+                message=f"Your auction for '{listing.commodity}' has ended! It was won by {winner.email} for ₹{amount}.",
+                notification_type='GENERAL'
+            )
+            
             # 2. Send appreciation mail
             subject = f"Congratulations! You won the auction: {listing.commodity}"
             message = f"""

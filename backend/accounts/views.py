@@ -17,14 +17,14 @@ from django.contrib import messages
 from django.utils import timezone
 from datetime import datetime, time, timedelta
 from django.db import models
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Max, Count
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse, HttpResponse 
 import razorpay
 from django.conf import settings 
 # Use our custom User model
 from django.contrib.auth import get_user_model
-from .models import Listing, Bid, NotificationSubscription, Notification, Order
+from .models import Listing, Bid, NotificationSubscription, Notification, Order, ContactMessage
 User = get_user_model()
 
 from .utils_new import (
@@ -105,8 +105,22 @@ def home(request):
 def contact(request):
     """Contact page view with form handling"""
     if request.method == 'POST':
-        # In a real app, we'd save the message or send an email
-        messages.success(request, "Thank you! Your message has been sent successfully.")
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        subject = request.POST.get('subject')
+        message = request.POST.get('message')
+        
+        if name and email and message:
+            ContactMessage.objects.create(
+                name=name,
+                email=email,
+                subject=subject,
+                message=message
+            )
+            messages.success(request, "Thank you! Your message has been sent successfully.")
+        else:
+            messages.error(request, "Please fill in all required fields.")
+            
         return redirect('contact')
     return render(request, 'contact.html')
 
@@ -307,6 +321,13 @@ def place_bid(request, listing_id):
     # Update Listing
     listing.current_highest_bid = bid_amount
     listing.save()
+    
+    # Notify Seller
+    Notification.objects.create(
+        receiver=listing.seller,
+        message=f"New bid of ₹{bid_amount} placed on your '{listing.commodity}' listing by {request.user.get_full_name() or request.user.email}!",
+        notification_type='GENERAL'
+    )
     
     return redirect('auction_detail', listing_id=listing_id)
 
@@ -1063,7 +1084,7 @@ def dashboard(request):
                     listings = [l for l in listings if l.start_time > now]
             
             context['listings'] = listings
-        elif section == 'orders' or section == 'sales':
+        elif section == 'orders':
             # Sold items for farmer
             # Filter Orders where the listing's seller is the specific user
             context['orders'] = Order.objects.filter(listing__seller=request.user).order_by('-created_at')
@@ -1081,7 +1102,6 @@ def dashboard(request):
             context['items_sold'] = Listing.objects.filter(seller=request.user, is_active=False).count()
             
             # Fix: Use actual Orders for Revenue, not just Bids on Inactive Listings
-            # This ensures it matches the Sales Report and only counts real sales.
             game_revenue = Order.objects.filter(
                 listing__seller=request.user,
                 status__in=['CONFIRMED', 'COMPLETED']
@@ -1100,9 +1120,7 @@ def dashboard(request):
                 date = (timezone.now() - timedelta(days=i)).date()
                 days.append(date.strftime('%b %d'))
                 
-                # Filter listings created on this day
                 day_listings = farmer_listings.filter(created_at__date=date)
-                
                 m_count = day_listings.filter(morning_session=True).count()
                 e_count = day_listings.filter(evening_session=True).count()
                 
@@ -1112,6 +1130,10 @@ def dashboard(request):
             context['graph_labels'] = days
             context['graph_morning'] = morning_counts
             context['graph_evening'] = evening_counts
+            
+            # Additional Graph: Revenue Trend (Last 7 Days)
+            context['sales_graph_labels'] = days
+            context['sales_graph_data'] = [float(Order.objects.filter(listing__seller=request.user, created_at__date=(timezone.now() - timedelta(days=i)).date(), status__in=['CONFIRMED', 'COMPLETED']).aggregate(total=Sum('total_amount'))['total'] or 0) for i in range(6, -1, -1)]
         
         elif section == 'payments':
             # Fetch confirmed/completed orders for this seller's listings
@@ -1132,8 +1154,7 @@ def dashboard(request):
             total_orders = seller_orders.count()
             avg_order_value = total_rev / total_orders if total_orders > 0 else 0
             
-            # Top Selling Item (Since Listing is 1:1, we group by commodity name)
-            from django.db.models import Count
+            # Top Selling Item
             top_item = seller_orders.values('listing__commodity').annotate(count=Count('id')).order_by('-count').first()
             
             context['performance'] = {
@@ -1159,6 +1180,9 @@ def dashboard(request):
             
             context['sales_graph_labels'] = days
             context['sales_graph_data'] = revenue_data
+
+        elif section == 'notifications':
+             context['notifications_list'] = request.user.notifications.all().order_by('-created_at')
 
         return render(request, "dashboard/seller.html", context)
         
@@ -1186,6 +1210,27 @@ def dashboard(request):
                     won_items.append(l)
             
             context['won_listings'] = won_items
+        elif section == 'watchlist':
+            # Watchlist: Active listings where user has placed a bid
+            # We also annotate with user's highest bid on that item for display
+            watchlist_items = Listing.objects.filter(
+                bids__buyer=request.user,
+                is_active=True,
+                end_time__gt=timezone.now()
+            ).distinct().order_by('end_time')
+            
+            # For each item, find user's max bid and status
+            for item in watchlist_items:
+                user_max_bid = item.bids.filter(buyer=request.user).aggregate(Max('amount'))['amount__max']
+                item.user_max_bid = user_max_bid
+                
+                if item.is_active:
+                    item.user_status = 'Leading' if user_max_bid >= item.current_highest_bid else 'Outbid'
+                else:
+                    item.user_status = 'Won' if user_max_bid >= item.current_highest_bid else 'Lost'
+            
+            context['watchlist_items'] = watchlist_items
+
         elif section == 'orders':
             context['orders'] = Order.objects.filter(buyer=request.user).order_by('-created_at')
         elif section == 'dashboard':
@@ -1208,10 +1253,7 @@ def dashboard(request):
                 date = (timezone.now() - timedelta(days=i)).date()
                 days.append(date.strftime('%b %d'))
                 
-                # Filter bids for this user on this day
                 day_bids = user_bids.filter(timestamp__date=date)
-                
-                # Count by session time
                 m_count = 0
                 e_count = 0
                 for b in day_bids:
@@ -1221,7 +1263,6 @@ def dashboard(request):
                     elif EVENING_START <= t <= EVENING_END:
                         e_count += 1
                     else:
-                        # Fallback to listing session if outside strict times but on that day
                         if b.listing.morning_session: m_count += 1
                         elif b.listing.evening_session: e_count += 1
                 
@@ -1231,6 +1272,10 @@ def dashboard(request):
             context['graph_labels'] = days
             context['graph_morning'] = morning_counts
             context['graph_evening'] = evening_counts
+            
+            # Additional Graph: Spending Trend (Last 7 Days)
+            context['spend_labels'] = days
+            context['spend_data'] = [float(Order.objects.filter(buyer=request.user, created_at__date=(timezone.now() - timedelta(days=i)).date(), status__in=['CONFIRMED', 'COMPLETED']).aggregate(total=Sum('total_amount'))['total'] or 0) for i in range(6, -1, -1)]
         
         elif section == 'notifications':
              context['notifications_list'] = request.user.notifications.all().order_by('-created_at')
@@ -1335,6 +1380,63 @@ def dashboard(request):
             context['all_listings'] = listings
         elif section == 'notifications':
              context['all_users'] = User.objects.all().order_by('email')
+        elif section == 'messages':
+             context['contact_messages'] = ContactMessage.objects.all().order_by('-created_at')
+        
+        elif section == 'reports':
+            # 1. Key Metrics
+            # Platform Volume: Only confirmed/completed orders
+            total_volume = Order.objects.filter(status__in=['CONFIRMED', 'COMPLETED']).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+            context['total_platform_volume'] = float(total_volume)
+            
+            # Active Farmers
+            context['active_farmers_count'] = User.objects.filter(user_type='FARMER', is_verified=True).count()
+            
+            # Successful Auctions (Closed and had bids)
+            context['successful_auctions_count'] = Listing.objects.filter(is_active=False).exclude(bids=None).count()
+            
+            # 2. Chart Data: Commodity Distribution (Top 5)
+            commodity_data = Listing.objects.values('commodity').annotate(count=Count('id')).order_by('-count')[:5]
+            context['commodity_labels'] = [c['commodity'] for c in commodity_data]
+            context['commodity_counts'] = [c['count'] for c in commodity_data]
+            
+            # 3. Chart Data: User Growth (Last 6 Months)
+            user_labels = []
+            user_data = []
+            now = timezone.now()
+            for i in range(5, -1, -1):
+                month_start = (now - timedelta(days=i*30)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                # Approximation of month label
+                label = month_start.strftime('%b')
+                user_labels.append(label)
+                
+                # Count users joined in that month approximation
+                count = User.objects.filter(date_joined__year=month_start.year, date_joined__month=month_start.month).count()
+                user_data.append(count)
+            
+            context['user_growth_labels'] = user_labels
+            context['user_growth_data'] = user_data
+
+            # 4. Chart Data: Transaction Volume (Last 4 Weeks)
+            volume_labels = ['Week 4', 'Week 3', 'Week 2', 'Current']
+            volume_data = []
+            for i in range(3, -1, -1):
+                week_start = now - timedelta(days=(i+1)*7)
+                week_end = now - timedelta(days=i*7)
+                vol = Order.objects.filter(
+                    created_at__range=(week_start, week_end),
+                    status__in=['CONFIRMED', 'COMPLETED']
+                ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+                volume_data.append(float(vol) / 100000) # In Lakhs for the chart label scale
+                
+            context['volume_labels'] = volume_labels
+            context['volume_data'] = volume_data
+        
+        elif section == 'categories':
+            # Group by commodity name and count active listings
+            # In a real app we might have a Category model, but here it's CharField
+            categories = Listing.objects.filter(is_active=True).values('commodity').annotate(active_count=Count('id')).order_by('-active_count')
+            context['categories_data'] = categories
             
         return render(request, "dashboard/admin.html", context)
     
@@ -1368,6 +1470,68 @@ def delete_listing(request, listing_id):
     if is_admin:
          return redirect(reverse('dashboard') + '?section=auctions')
     return redirect(reverse('dashboard') + '?section=listings')
+
+@login_required
+def edit_listing(request, listing_id):
+    """Edit an upcoming listing"""
+    listing = get_object_or_404(Listing, id=listing_id)
+    
+    # Permission Check
+    if listing.seller != request.user:
+        messages.error(request, "You don't have permission to edit this listing.")
+        return redirect('dashboard')
+        
+    # Status Check: Must be active and upcoming
+    # We allow editing if start_time is in future.
+    # If it's already live or closed, no editing.
+    now = timezone.now()
+    if not listing.is_active or listing.start_time <= now:
+         messages.error(request, "Cannot edit a listing that is already Live or Closed.")
+         return redirect(reverse('dashboard') + '?section=listings')
+         
+    if request.method == 'POST':
+        # Update fields
+        listing.commodity = request.POST.get('commodity')
+        listing.quantity = request.POST.get('quantity')
+        listing.unit = request.POST.get('unit')
+        listing.base_price = request.POST.get('base_price')
+        listing.description = request.POST.get('description')
+        
+        # Handle Image Update
+        if 'image' in request.FILES:
+            listing.image = request.FILES['image']
+            
+        # Handle Session/Time Updates
+        morning_session = request.POST.get('morning_session') == 'on'
+        evening_session = request.POST.get('evening_session') == 'on'
+        
+        if not morning_session and not evening_session:
+             messages.error(request, "Please select at least one session.")
+             return render(request, 'dashboard/edit_listing.html', {'listing': listing})
+
+        # Recalculate end time based on new sessions (keeping date same)
+        # Note: We are NOT allowing date change here to keep it simple, 
+        # as changing date might conflict with "Upcoming" check if moved to past.
+        # If they want to change date, they should delete and re-create.
+        
+        listing.morning_session = morning_session
+        listing.evening_session = evening_session
+        
+        # Recalculate end_time
+        # We need the original date.
+        # listing.listing_date DOES NOT EXIST.
+        # We should use the date from end_time (or start_time).
+        
+        target_date = timezone.localtime(listing.end_time).date()
+        
+        
+        listing.end_time = calculate_listing_end_time(target_date, morning_session, evening_session)
+        
+        listing.save()
+        messages.success(request, "Listing updated successfully.")
+        return redirect(reverse('dashboard') + '?section=listings')
+        
+    return render(request, 'dashboard/edit_listing.html', {'listing': listing})
 
 # New: Buyer notifications view (JSON)
 @login_required
@@ -1523,73 +1687,125 @@ def payment_success(request):
     return render(request, 'payment_success.html', context)
 @csrf_exempt
 def chatbot_response(request):
+    """Advanced AI-powered chatbot response with role-based personas"""
     if request.method == 'POST':
         try:
             import json
-            data = json.loads(request.body)
-            user_msg = data.get('message', '').lower()
+            from .ai_utils import get_ai_response
+            from .utils import get_current_session_info
             
+            data = json.loads(request.body)
+            user_msg = data.get('message', '')
             user = request.user
+            
+            # --- CONTEXT GATHERING ---
+            session_info = get_current_session_info()
             role = "Support"
+            role_description = "General Platform Guide"
+            bot_name = "Support Bot"
+            
+            # Get a few active auctions for context
+            live_auctions = Listing.objects.filter(is_active=True).order_by('-created_at')[:5]
+            
+            context_data = {
+                "current_time": timezone.now().strftime("%Y-%m-%d %I:%M %p"),
+                "session_name": session_info['session'].capitalize(),
+                "session_active": session_info['is_active'],
+                "next_session": session_info['next_session_start'].strftime("%I:%M %p") if session_info.get('next_session_start') else "Tomorrow",
+                "active_auctions_list": [{"commodity": l.commodity, "price": str(l.display_price)} for l in live_auctions]
+            }
+
             if user.is_authenticated:
                 if user.user_type == 'BUYER':
-                    role = "Buyer"
-                elif user.user_type == 'FARMER':
-                    role = "Farmer"
-                elif user.is_superuser or user.user_type == 'ADMIN':
-                    role = "Admin"
-            
-            # Get Auction Session Info
-            from .utils import get_current_session_info
-            session_info = get_current_session_info()
-            session_name = session_info['session'].capitalize()
-            
-            # Basic contextual logic
-            response_text = ""
-            if "hello" in user_msg or "hi" in user_msg:
-                response_text = f"Hello! As your {role} assistant, I'm here to help. Currently, we are in the **{session_name}** auction session."
-            
-            elif "session" in user_msg or "time" in user_msg:
-                if session_info['session'] == 'break':
-                    response_text = f"We are currently on a **Break**. The next session (Evening) starts at {session_info['next_session_start'].strftime('%I:%M %p')}."
-                elif session_info['is_active']:
-                    response_text = f"The active session is **{session_name}**. It will end at {session_info['end_time'].strftime('%I:%M %p')}."
-                else:
-                    response_text = f"The sessions are currently **Closed**. The next session starts tomorrow at {session_info['next_session_start'].strftime('%I:%M %p')}."
-            
-            elif ("list" in user_msg or "who" in user_msg) and ("user" in user_msg or "member" in user_msg or "active" in user_msg):
-                if role == "Admin":
-                    from django.contrib.sessions.models import Session
-                    # This is a naive way to find "logged in" users in local dev
-                    # In production, you'd use a more robust way or check recently active
-                    from django.utils import timezone
-                    active_users = User.objects.filter(last_login__gte=timezone.now() - timezone.timedelta(hours=1))
-                    if active_users.exists():
-                        user_list = ", ".join([u.email for u in active_users])
-                        response_text = f"There are {active_users.count()} users active in the last hour: {user_list}."
-                    else:
-                        response_text = "No users have logged in recently."
-                else:
-                    response_text = "Access Denied. Only administrators can list active users."
-
-            elif "bid" in user_msg or "auction" in user_msg:
-                if role == "Buyer":
-                    response_text = "To place a bid, navigate to any live auction in the Marketplace and enter an amount higher than the current bid."
-                elif role == "Farmer":
-                    response_text = "Your active listings are shown on your Dashboard. You'll receive notifications when new bids are placed."
-                else:
-                    response_text = "Auctions are the heart of BidVerse. Buyers use them to purchase fresh commodities directly from farmers."
-            
-            elif "membership" in user_msg or "plan" in user_msg:
-                response_text = "We offer various membership plans including Free Trial, Monthly, and Yearly. Check the Membership section for details."
-            
-            elif "contact" in user_msg or "support" in user_msg:
-                response_text = "You can reach our support team via the Contact page or by emailing support@bidverse.com."
-            
-            else:
-                response_text = f"I'm the {role} assistant. I can help you with auction sessions, bidding rules, or account management. Currently, the {session_name} session is underway."
+                    role, role_description, bot_name = "Buyer", "Bidding Assistant", "Bid Bot"
+                    active_bids = Bid.objects.filter(buyer=user, listing__is_active=True).order_by('-timestamp')[:3]
+                    context_data["user_active_bids"] = [{"commodity": b.listing.commodity, "amount": str(b.amount)} for b in active_bids]
+                    won_auctions = Listing.objects.filter(is_active=False, bids__buyer=user, current_highest_bid__isnull=False).distinct()[:3]
+                    context_data["user_won_count"] = won_auctions.count()
                 
-            return JsonResponse({'response': response_text})
+                elif user.user_type == 'FARMER':
+                    role, role_description, bot_name = "Seller", "Listing Expert", "Crop Bot"
+                    my_listings = Listing.objects.filter(seller=user, is_active=True)
+                    context_data["user_active_listings"] = [{"commodity": l.commodity, "price": str(l.display_price), "bids": l.bids.count()} for l in my_listings]
+                
+                elif user.is_superuser or user.user_type == 'ADMIN':
+                    role, role_description, bot_name = "Admin", "System Monitor", "Shield Bot"
+                    context_data["platform_stats"] = {
+                        "total_users": User.objects.count(),
+                        "active_auctions": Listing.objects.filter(is_active=True).count(),
+                        "pending_verifications": User.objects.filter(is_verified=False).count()
+                    }
+
+            # --- SYSTEM INSTRUCTION ---
+            system_instruction = f"""
+            You are {bot_name}, the {role_description} for BidVerse.
+            Your tone is professional, helpful, and concise. 
+            
+            ROLE-SPECIFIC FOCUS:
+            - ADMIN: Focus on platform health, stats, and management. You have access to user counts and verification status.
+            - BUYER: Help with bidding strategies, finding auctions, and tracking their bids.
+            - SELLER: Help with listing optimization, market trends, and managing their sales.
+            - SUPPORT: Help anyone understand how BidVerse auctions and sessions work.
+
+            CURRENT CONTEXT:
+            {json.dumps(context_data, indent=2)}
+
+            CONSTRAINTS:
+            - Keep responses under 3 paragraphs.
+            - Use **bold** for emphasis.
+            - If you don't know something specific from the database, tell the user to check their dashboard.
+            - Never admit you are an AI; stay in character as {bot_name}.
+            """
+
+            # --- AI CALL ---
+            ai_text = get_ai_response(user_msg, system_instruction)
+
+            # --- FALLBACK LOGIC ---
+            if not ai_text:
+                # Rule-based fallback if Gemini fails (e.g. Quota/Key issues)
+                user_msg_lower = user_msg.lower()
+                
+                # Contextual responses for quick actions
+                if "active auctions" in user_msg_lower or "auctions" in user_msg_lower:
+                    auctions = context_data.get('active_auctions_list', [])
+                    if auctions:
+                        auc_str = "\n".join([f"- **{a['commodity']}** starting at ₹{a['price']}" for a in auctions])
+                        ai_text = f"Currently active auctions in our marketplace:\n{auc_str}\n\nYou can bid on these right now in the **Marketplace**."
+                    else:
+                        ai_text = "There are no active auctions at this moment. Please check back during the next session!"
+                elif "bidding help" in user_msg_lower or "how to bid" in user_msg_lower:
+                    ai_text = "To bid effectively:\n1. Check the **current highest bid** in the Marketplace.\n2. Enter an amount that is at least **1% higher** than the current bid.\n3. Keep an eye on the **session timer** to ensure your bid is placed before the session ends."
+                elif "bid" in user_msg_lower:
+                    bids_str = ", ".join([f"{b['commodity']} at ₹{b['amount']}" for b in context_data.get('user_active_bids', [])])
+                    ai_text = f"I'm currently having trouble connecting to my brain, but I can see your recent bids: **{bids_str if bids_str else 'No active bids found'}**. Check your dashboard for the latest updates."
+                elif "listing tips" in user_msg_lower or "tip" in user_msg_lower:
+                    ai_text = "To get the best price for your commodity:\n1. Use **high-quality photos** of your actual crop.\n2. Write a **detailed description** including grade and location.\n3. Set a **fair base price** to encourage initial bids."
+                elif "how to list" in user_msg_lower or "create listing" in user_msg_lower:
+                    ai_text = "To list your commodity on BidVerse:\n1. Go to your **Farmer Dashboard**.\n2. Click the **'+ New Listing'** button.\n3. Enter details like **Commodity Name**, **Quantity**, and **Base Price**.\n4. Select your preferred **Auction Session** (Morning/Evening).\n5. Click **'Create Listing'** to go live!"
+                elif "listing" in user_msg_lower or "my listings" in user_msg_lower:
+                    listings_str = ", ".join([f"{l['commodity']} (₹{l['price']})" for l in context_data.get('user_active_listings', [])])
+                    ai_text = f"My AI connection is a bit slow! Your active listings are: **{listings_str if listings_str else 'None'}**. You can manage them in your seller profile."
+                elif "how it works" in user_msg_lower or "guide" in user_msg_lower:
+                    ai_text = "BidVerse is a direct farmer-to-buyer marketplace.\n1. **Morning Session**: 9:30 AM - 1:30 PM\n2. **Break**: 1:30 PM - 2:15 PM\n3. **Evening Session**: 2:15 PM - 5:30 PM\nSimply place bids on items you want, and the highest bidder wins at the end of the session."
+                elif "trend" in user_msg_lower or "market" in user_msg_lower:
+                    ai_text = "I'm currently unable to fetch real-time market trends, but generally, high-quality spices and rice are seeing good demand in the **Kerala** market this week."
+                elif "health" in user_msg_lower or "system" in user_msg_lower:
+                    stats = context_data.get('platform_stats', {})
+                    ai_text = f"**System Health Status: Optimal.**\n- Active Sessions: **{context_data.get('session_name')}**\n- Live Auctions: **{stats.get('active_auctions', 0)}**\n- Total Platform Users: **{stats.get('total_users', 0)}**\nEverything is running smoothly!"
+                elif "pending" in user_msg_lower or "verification" in user_msg_lower:
+                    stats = context_data.get('platform_stats', {})
+                    pending = stats.get('pending_verifications', 0)
+                    ai_text = f"There are currently **{pending}** users awaiting identity verification. You can review them in the **User Management** section of your dashboard."
+                elif "stat" in user_msg_lower:
+                    stats = context_data.get('platform_stats', {})
+                    ai_text = f"Current Platform Overview:\n- Users: **{stats.get('total_users', 0)}**\n- Auctions: **{stats.get('active_auctions', 0)}**\n- Pending Verifications: **{stats.get('pending_verifications', 0)}**"
+                elif "session" in user_msg_lower:
+                    ai_text = f"We are in the **{context_data['session_name']}** session. The next session starts at {context_data['next_session']}."
+                else:
+                    ai_text = f"Hi, I'm {bot_name}. I'm currently in a low-power mode but I can help you with your dashboard and auction sessions. How else can I assist?"
+
+            return JsonResponse({'response': ai_text})
+
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Invalid request'}, status=405)
@@ -1794,98 +2010,41 @@ def payment_success_auction(request):
 @csrf_exempt
 def corporate_connect_ai(request):
     """
-    AI-Powered Endpoint for Corporate Connect.
-    Uses Gemini API (gemini-1.5-flash) to find REAL corporate buyers.
+    Verified Corporate Directory (Database Driven).
+    Provides a curated list of trusted corporate buyers, rice mills, and exporters.
     """
     if request.method == 'POST':
         import json
-        import os
-        # Use requests if available, else fallback to urllib (but we know requests is in requirements)
         try:
-            import requests
-        except ImportError:
-            requests = None
-            import urllib.request
-            import urllib.error
-
-        try:
+            from .models import CorporateConnect
             data = json.loads(request.body)
             query = data.get('query', '').lower()
-            api_key = os.getenv('GEMINI_API_KEY')
             
-            if api_key and requests:
-                try:
-                    url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}'
-                    headers = {'Content-Type': 'application/json'}
-                    
-                    # Instruction for structured JSON output
-                    prompt = f"""
-                    You are a business intelligence assistant for Indian farmers.
-                    The user wants to sell: "{query}".
-                    Find 3-5 REAL or REALISTIC corporate buyers (Factories, Mills, Exporters) in India for this product.
-                    
-                    **IMPORTANT: Prioritize buyers located in KERALA state first, then other South Indian states.**
-                    
-                    Return ONLY a JSON array with this structure:
-                    [
-                        {{
-                            "name": "Company Name",
-                            "type": "Miller/Exporter/Factory",
-                            "location": "City, State",
-                            "requirements": "Specific requirements (e.g. Basmati Rice)",
-                            "phone": "+91-XXXXXXXXXX"
-                        }}
-                    ]
-                    """
-                    
-                    payload = {
-                        "contents": [{"parts": [{"text": prompt}]}],
-                        "generationConfig": {"response_mime_type": "application/json"}
-                    }
-                    
-                    response = requests.post(url, json=payload, headers=headers, timeout=10)
-                    
-                    if response.status_code == 200:
-                        res_data = response.json()
-                        raw_text = res_data['candidates'][0]['content']['parts'][0]['text']
-                        ai_results = json.loads(raw_text)
-                        return JsonResponse({'results': ai_results})
-                        
-                except Exception as e:
-                    print(f"AI Connectivity/Parse Error: {e}")
+            if query:
+                # Basic matching logic (against name, type, and requirements)
+                from django.db.models import Q
+                results_objs = CorporateConnect.objects.filter(
+                    Q(name__icontains=query) | 
+                    Q(business_type__icontains=query) | 
+                    Q(location__icontains=query) |
+                    Q(requirements__icontains=query)
+                ).filter(is_verified=True)
+            else:
+                results_objs = CorporateConnect.objects.filter(is_verified=True)[:5]
 
-            # Fallback to Mock Data if API fails
-            mock_data = [
-                {
-                    "name": "Kairali Spices & Exports",
-                    "type": "Exporter",
-                    "location": "Kochi, Kerala",
-                    "requirements": f"Premium {query}",
-                    "phone": "+91-484-2345678"
-                },
-                {
-                    "name": "Malabar Agile Agro",
-                    "type": "Processor",
-                    "location": "Kozhikode, Kerala",
-                    "requirements": f"Organic {query}",
-                    "phone": "+91-495-2765432"
-                },
-                {
-                    "name": "KRBL Limited (India Gate)",
-                    "type": "Miller/Exporter",
-                    "location": "Sangrur, Punjab",
-                    "requirements": f"Bulk {query.capitalize()}",
-                    "phone": "+91-120-4060300"
-                },
-                {
-                    "name": "ITC Limited (Agri Business)",
-                    "type": "Exporter/Factory",
-                    "location": "Guntur, Andhra Pradesh",
-                    "requirements": f"Quality grade {query}",
-                    "phone": "+91-0863-2354001"
-                }
-            ]
-            return JsonResponse({'results': mock_data})
+            # Convert to list of dicts for JSON response
+            results = []
+            for b in results_objs:
+                results.append({
+                    "name": b.name,
+                    "type": b.business_type,
+                    "location": b.location,
+                    "requirements": b.requirements,
+                    "phone": b.phone,
+                    "email": b.email
+                })
+
+            return JsonResponse({'results': results})
             
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)

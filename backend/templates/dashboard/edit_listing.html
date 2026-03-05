@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container" style="padding: 120px 0 60px;">
+    <div class="content-card" style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+        <div class="card-header" style="text-align: center; margin-bottom: 30px;">
+            <h2 style="font-size: 24px; font-weight: 700; color: #333;">Edit Listing</h2>
+            <p style="color: #666;">Update details for your upcoming auction</p>
+        </div>
+
+        {% if messages %}
+        <div class="messages" style="margin-bottom: 20px;">
+            {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" style="padding: 10px; border-radius: 8px; background: #fee2e2; color: #991b1b; text-align: center;">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST" enctype="multipart/form-data" style="display: grid; gap: 20px;">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Commodity Name</label>
+                <input type="text" name="commodity" value="{{ listing.commodity }}" required 
+                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Quantity</label>
+                    <input type="number" step="0.01" name="quantity" value="{{ listing.quantity }}" required 
+                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                </div>
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Unit</label>
+                    <select name="unit" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                        <option value="kg" {% if listing.unit == 'kg' %}selected{% endif %}>Kilograms (kg)</option>
+                        <option value="quintal" {% if listing.unit == 'quintal' %}selected{% endif %}>Quintal</option>
+                        <option value="ton" {% if listing.unit == 'ton' %}selected{% endif %}>Ton</option>
+                        <option value="sheets" {% if listing.unit == 'sheets' %}selected{% endif %}>Sheets</option>
+                        <option value="crates" {% if listing.unit == 'crates' %}selected{% endif %}>Crates</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Base Price (₹ per unit)</label>
+                <div style="position: relative;">
+                    <span style="position: absolute; left: 12px; top: 12px; color: #666;">₹</span>
+                    <input type="number" step="0.01" name="base_price" value="{{ listing.base_price }}" required 
+                        style="width: 100%; padding: 12px 12px 12px 30px; border: 1px solid #ddd; border-radius: 8px;">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Sessions</label>
+                <div style="display: flex; gap: 20px; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="morning_session" {% if listing.morning_session %}checked{% endif %} style="width: 18px; height: 18px;">
+                        <div>
+                            <span style="display: block; font-weight: 600;">Morning Session</span>
+                            <span style="font-size: 12px; color: #666;">09:30 AM - 01:30 PM</span>
+                        </div>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" name="evening_session" {% if listing.evening_session %}checked{% endif %} style="width: 18px; height: 18px;">
+                        <div>
+                            <span style="display: block; font-weight: 600;">Evening Session</span>
+                            <span style="font-size: 12px; color: #666;">02:15 PM - 06:15 PM</span>
+                        </div>
+                    </label>
+                </div>
+                <!-- <p style="font-size: 12px; color: #666; margin-top: 5px;">Note: Changing sessions will update the auction end time for the original date.</p> -->
+            </div>
+
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Description (Optional)</label>
+                <textarea name="description" rows="3" 
+                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">{{ listing.description }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Update Image (Optional)</label>
+                {% if listing.image %}
+                <div style="margin-bottom: 10px;">
+                    <img src="{{ listing.image.url }}" alt="Current Image" style="height: 60px; border-radius: 4px; border: 1px solid #eee;">
+                </div>
+                {% endif %}
+                <input type="file" name="image" accept="image/*" 
+                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: white;">
+            </div>
+
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+                <a href="{% url 'dashboard' %}?section=listings" class="btn" style="flex: 1; padding: 12px; border: 1px solid #d1d5db; color: #374151; border-radius: 8px; text-align: center; font-weight: 600; background: white;">Cancel</a>
+                <button type="submit" class="btn" style="flex: 1; padding: 12px; background: #166534; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

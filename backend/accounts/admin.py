@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Listing, Bid, NotificationSubscription, Notification, Order
+from .models import User, Listing, Bid, NotificationSubscription, Notification, Order, ContactMessage, CorporateConnect
 
 class CustomUserAdmin(UserAdmin):
     list_display = ('username', 'email', 'user_type', 'is_verified', 'phone', 'is_staff')
@@ -32,9 +32,24 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ('is_read', 'notification_type')
     search_fields = ('receiver__email', 'message')
 
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = ('subject', 'name', 'email', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('name', 'email', 'subject', 'message')
+    readonly_fields = ('created_at',)
+
+
+class CorporateConnectAdmin(admin.ModelAdmin):
+    list_display = ('name', 'business_type', 'location', 'phone', 'is_verified')
+    list_filter = ('business_type', 'is_verified')
+    search_fields = ('name', 'location', 'requirements')
+
+
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Listing, ListingAdmin)
 admin.site.register(Bid, BidAdmin)
 admin.site.register(NotificationSubscription)
 admin.site.register(Notification, NotificationAdmin)
 admin.site.register(Order, OrderAdmin)
+admin.site.register(ContactMessage, ContactMessageAdmin)
+admin.site.register(CorporateConnect, CorporateConnectAdmin)

@@ -533,6 +533,7 @@ def login_user(request):
         email = request.POST.get("email")
         password = request.POST.get("password")
         csrf_token = request.POST.get("csrfmiddlewaretoken")
+        next_url = request.POST.get("next") or request.GET.get("next")
 
         # Debug logging
         print(f"Login attempt for email: {email}")
@@ -571,6 +572,10 @@ def login_user(request):
                         messages.warning(request, "Your free trial has ended. Please purchase a membership to continue.")
                         return redirect('membership_plans')
 
+            if next_url:
+                print(f"Redirecting to {next_url}...")
+                return redirect(next_url)
+                
             print("Redirecting to home...")
             return redirect("home")
         else:

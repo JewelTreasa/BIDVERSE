@@ -40,6 +40,9 @@
 
                 <form method="POST" action="/login/" class="login-form">
                     {% csrf_token %}
+                    {% if request.GET.next %}
+                        <input type="hidden" name="next" value="{{ request.GET.next }}">
+                    {% endif %}
                     <div class="form-group">
                         <label for="email">Email or Phone Number</label>
                         <div class="input-with-icon">

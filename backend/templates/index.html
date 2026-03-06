@@ -245,7 +245,11 @@
                 <h1>Shaping the future of the <span class="highlight">fresh produce</span> industry</h1>
                 <p>AgriTech software solutions, custom-built for your fresh produce business to ensure transparency and fair pricing.</p>
                 <div class="hero-actions">
-                    <a href="{% url 'register' %}" class="btn btn-lime">Get Started</a>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'marketplace' %}" class="btn btn-lime">Get Started</a>
+                    {% else %}
+                        <a href="{% url 'register' %}" class="btn btn-lime">Get Started</a>
+                    {% endif %}
                 </div>
             </div>
         </div>

@@ -133,7 +133,10 @@
         {% if messages %}
         <div class="message-container" style="position: fixed; top: 100px; right: 20px; z-index: 1050; max-width: 400px;">
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-lg" role="alert" style="margin-bottom: 10px; border-left: 5px solid {% if message.tags == 'success' %}#2e7d32{% elif message.tags == 'error' %}#dc2626{% else %}#1E293B{% endif %};">
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-lg" role="alert" 
+                     {% if message.tags == 'success' %}style="margin-bottom: 10px; border-left: 5px solid #2e7d32;"
+                     {% elif message.tags == 'error' %}style="margin-bottom: 10px; border-left: 5px solid #dc2626;"
+                     {% else %}style="margin-bottom: 10px; border-left: 5px solid #1E293B;"{% endif %}>
                     <div style="display: flex; align-items: center;">
                         <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} me-2" style="font-size: 1.2rem; margin-right: 10px;"></i>
                         <div>{{ message }}</div>
@@ -172,15 +175,7 @@
                         <li><a href="{% url 'privacy_policy' %}">Privacy Policy</a></li>
                     </ul>
                 </div>
-                <div class="footer-col">
-                    <h4>Connect With Us</h4>
-                    <div class="social-icons">
-                        <a href="#"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
-                    </div>
-                </div>
+
 
                 </div>
             </div>
